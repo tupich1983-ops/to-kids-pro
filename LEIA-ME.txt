@@ -1,2 +1,5 @@
-TO Kids PRO 6.7 - REORGANIZACAO VISUAL DE TESTE
-Recursos e biblioteca movidos para o topo do aplicativo apos login. Botoes destacados. Titulo do painel legado atualizado. Nenhuma alteracao no banco ou nos formularios. O painel legado segue local, sem sincronizacao com Supabase e acessivel por URL direta. SOMENTE DADOS FICTICIOS.
+TO Kids PRO 6.8 - TESTE - Navegacao unificada e modulo Sobre o Criador.
+
+Substitua os arquivos no GitHub Pages. Nao mude o Supabase. Nao use dados reais.
+Os recursos do painel 5.9 permanecem locais e nao sincronizados; o painel.html ainda pode ser acessado diretamente por URL, sem login.
+A nova interface reorganiza os modulos existentes; nao altera as tabelas Supabase.
