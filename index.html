@@ -289,7 +289,6 @@ function installLegacyContextObserver(){
 function legacyAgeIndex(){const p=patientRows.find(x=>x.id===selectedPatientId),m=monthsOld(p);if(m===null)return null;return m<=6?0:m<=12?1:m<=24?2:m<=36?3:m<=72?4:m<=108?5:6}
 function showTool(tab){const frame=$('frame');if(!frame.contentWindow||typeof frame.contentWindow.view!=='function'){$('toolstatus').textContent='Carregando recursos. Aguarde um instante e tente novamente.';return}try{frame.contentWindow.view(tab);
  const age=legacyAgeIndex(),doc=frame.contentDocument;
- if(age!==null&&tab==='library'&&typeof frame.contentWindow.tokidsShowAgeLibrary==='function')frame.contentWindow.tokidsShowAgeLibrary(age);
  if(age!==null&&tab==='sensory'){const el=doc?.getElementById('ssAge');if(el){el.value=String(age);el.dispatchEvent(new Event('change',{bubbles:true}))}}
  if(tab==='sensory')syncLegacyPatientContext();
  if(age!==null&&tab==='foodactivities'){const el=doc?.getElementById('foodActivityFilter');if(el){el.value=age===0?'':age===1?'6–12':age<=3?'1–3':age===4?'4–6':age===5?'7–9':'10–12';el.dispatchEvent(new Event('input',{bubbles:true}))}}
