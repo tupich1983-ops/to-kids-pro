@@ -19,7 +19,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 .creator-profile{max-width:780px;line-height:1.7}.creator-profile h3{font-size:25px;margin-bottom:0}.creator-profile .role{color:#147d71;font-weight:650}.creator-profile p{margin:12px 0}
 @media(max-width:700px){.dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dashboard-tile{min-height:96px;padding:12px 7px;font-size:13px}.dashboard-tile .tile-icon{font-size:25px}.workspace{padding:12px}.dashboard-head{padding:12px 8px 0}main{padding:0 8px}}
 @media print{.dashboard-grid,.work-toolbar,.topnav,#gate,header{display:none!important}.workpanel[hidden]{display:none!important}}
- .creator-photo{border:2px dashed #a3c8c0;border-radius:18px;width:180px;height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#eef6f3;color:#365f5c;font-size:32px;margin:8px 0 20px}.creator-photo small{font-size:12px}.contact-link{display:inline-block;padding:12px 18px;background:#147d71;color:white;border-radius:9px;text-decoration:none} .patient-button:hover{outline:2px solid #147d71} #patientprofile{margin-top:18px} </style></head><body><header><h2>TO Kids PRO 6.9.1 • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status"></p></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
+ .creator-photo{border:2px dashed #a3c8c0;border-radius:18px;width:180px;height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#eef6f3;color:#365f5c;font-size:32px;margin:8px 0 20px}.creator-photo small{font-size:12px}.contact-link{display:inline-block;padding:12px 18px;background:#147d71;color:white;border-radius:9px;text-decoration:none} .patient-button:hover{outline:2px solid #147d71} #patientprofile{margin-top:18px} </style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status"></p></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
 <div class="dashboard-grid" id="dashboard" aria-label="Módulos principais">
 <button class="dashboard-tile" type="button" data-page="patients"><span class="tile-icon">👶</span>Pacientes</button>
 <button class="dashboard-tile" type="button" data-page="evaluation"><span class="tile-icon">📋</span>Avaliação completa</button>
@@ -33,7 +33,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 </div>
 <div class="workspace" id="workspace"><div class="work-toolbar"><h3 id="worktitle">Pacientes</h3><button type="button" id="homebutton" class="secondary">↑ Voltar ao menu</button></div><div id="workpanels"></div></div>
 <nav class="topnav" aria-label="Navegação principal"><a href="#clinical">Central Clínica</a><a href="#resources" id="resourceslink">Biblioteca e sugestões</a><a href="#wizard">Avaliação completa</a></nav>
-<section id="resources"><h3>Biblioteca e recursos terapêuticos</h3><p class="note">As 100 fichas ilustradas, o desenvolvimento sensoriomotor e a biblioteca de seletividade alimentar estão reunidos aqui no aplicativo 6.9.1. <b>São recursos locais de consulta:</b> seus formulários antigos não sincronizam com o Supabase. Para prontuários, use a Central Clínica acima.</p>
+<section id="resources"><h3>Biblioteca e recursos terapêuticos</h3><div id="resourcepatient" class="note" role="status">Selecione um paciente na Central Clínica para contextualizar os recursos.</div><p class="note">As 100 fichas ilustradas, o desenvolvimento sensoriomotor e a biblioteca de seletividade alimentar estão reunidos aqui no aplicativo 6.9.1. <b>São recursos locais de consulta:</b> seus formulários antigos não sincronizam com o Supabase. Para prontuários, use a Central Clínica acima.</p>
 <div class="quicktools" role="group" aria-label="Recursos terapêuticos">
 <button type="button" class="secondary" data-tool="library">100 atividades ilustradas</button>
 <button type="button" class="secondary" data-tool="sensory">Desenvolvimento sensoriomotor</button>
@@ -82,6 +82,7 @@ const recBands=[
 function setSelectedPatient(id,show=false){
  if(!patientRows.some(p=>p.id===id))return;
  selectedPatientId=id;
+ updateActivePatientUI();
  for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const el=$(name);if(el){el.value=id;el.dispatchEvent(new Event('change'))}}
  renderPatientProfile();
  if(show)openPage('patients');
@@ -114,7 +115,7 @@ async function refreshData(){
  if(re){msg('Erro ao carregar registros: '+re.message,true);return}
  allRecords=rs||[];
  if(!patientRows.some(p=>p.id===selectedPatientId))selectedPatientId=patientRows[0]?.id||null;
- if(selectedPatientId)setSelectedPatient(selectedPatientId);
+ if(selectedPatientId)setSelectedPatient(selectedPatientId);else updateActivePatientUI();
  renderModuleHistory();renderWizardHistory();$('recordlist').replaceChildren();
  for(const r of rs||[]){const row=document.createElement('p');row.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.tipo)+' · '+clean(r.titulo)+' · '+clean(r.conteudo?.observacao);$('recordlist').append(row)}
  $('evallist').replaceChildren();
@@ -219,11 +220,39 @@ $('printreport').onclick=()=>{const pid=$('modulepatient').value,p=patientRows.f
  const w=window.open('','_blank');if(!w)return msg('Permita a abertura de janela para imprimir.',true);const doc=w.document;doc.title='Relatório fictício - TO Kids PRO';const style=doc.createElement('style');style.textContent='body{font:14px Arial;max-width:800px;margin:40px auto;line-height:1.5}section{page-break-inside:avoid;margin:24px 0}h1{color:#164b4c}small{color:#666}';doc.head.append(style);const h=doc.createElement('h1');h.textContent='TO Kids PRO — Relatório de teste';doc.body.append(h);const warn=doc.createElement('p');warn.textContent='DOCUMENTO FICTÍCIO — NÃO UTILIZAR COMO LAUDO OU PRONTUÁRIO REAL';doc.body.append(warn);const name=doc.createElement('p');name.textContent='Código do paciente: '+p.nome;doc.body.append(name);
  for(const r of recs){const sec=doc.createElement('section'),title=doc.createElement('h2');title.textContent=r.titulo+' — '+clean(r.conteudo.data);sec.append(title);for(const [k,v] of Object.entries(r.conteudo.campos||{})){if(!v)continue;const para=doc.createElement('p');const label=moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;para.textContent=label+': '+v;sec.append(para)}doc.body.append(sec)}w.focus();w.print()};
 const toolNames={library:'Biblioteca das 100 atividades ilustradas',sensory:'Desenvolvimento sensoriomotor',foodactivities:'Atividades de seletividade alimentar',feeding:'Avaliação alimentar (legado)',foodplan:'Plano alimentar (legado)',foodprogress:'Evolução alimentar (legado)',plan:'Planejamento de sessões',advanced:'Marcos do desenvolvimento'};
+function updateActivePatientUI(){
+ const p=patientRows.find(x=>x.id===selectedPatientId);
+ const msg=p?'Paciente ativo: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Diagnóstico não informado'):'Nenhum paciente ativo. Abra um paciente em Pacientes.';
+ let bar=$('activepatientbar');
+ if(!bar){bar=document.createElement('div');bar.id='activepatientbar';bar.style.cssText='background:#e1f3ee;border:1px solid #7bc5b5;border-radius:10px;padding:12px 15px;margin:8px 0;font-weight:700';$('dashboard').insertAdjacentElement('beforebegin',bar)}
+ bar.textContent=msg;
+ if($('resourcepatient'))$('resourcepatient').textContent=p?'Consultando recursos para '+p.nome+' ('+ageLabel(p)+'). Diagnóstico informado: '+(p.dados?.diagnostico||'não informado')+'. A seleção é compartilhada com a Central Clínica; os recursos antigos continuam apenas locais.':'Selecione um paciente no módulo Pacientes.';
+}
+function syncLegacyPatientContext(){
+ const p=patientRows.find(x=>x.id===selectedPatientId),doc=$('frame').contentDocument;
+ if(!p||!doc)return;
+ const age=legacyAgeIndex();
+ const legacyPatient=doc.getElementById('ssPatient');
+ if(legacyPatient){
+  // A lista legada é local e não contém os pacientes do Supabase.
+  // Evita seleção enganosa de outro cadastro e mostra o paciente correto.
+  const label=legacyPatient.previousElementSibling;
+  if(label&&label.tagName==='LABEL')label.style.display='none';
+  legacyPatient.style.display='none';
+  let info=doc.getElementById('supabasePatientContext');
+  if(!info){info=doc.createElement('p');info.id='supabasePatientContext';info.style.cssText='padding:12px;border-radius:8px;background:#e1f3ee;border:1px solid #7bc5b5;font-weight:700';legacyPatient.parentNode.insertBefore(info,legacyPatient)}
+  info.textContent='Paciente ativo no Supabase: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Sem diagnóstico informado')+'. Não salve formulários do painel antigo: eles não estão vinculados ao prontuário.';
+ }
+ const dx=doc.getElementById('ssDx');
+ if(dx){const d=(p.dados?.diagnostico||'').toLowerCase();const option=[...dx.options].find(o=>o.value.toLowerCase()===d||o.textContent.toLowerCase()===d);if(option){dx.value=option.value;dx.dispatchEvent(new Event('change',{bubbles:true}))}}
+ if(age!==null){const el=doc.getElementById('ssAge');if(el){el.value=String(age);el.dispatchEvent(new Event('change',{bubbles:true}))}}
+}
 function legacyAgeIndex(){const p=patientRows.find(x=>x.id===selectedPatientId),m=monthsOld(p);if(m===null)return null;return m<=6?0:m<=12?1:m<=24?2:m<=36?3:m<=72?4:m<=108?5:6}
 function showTool(tab){const frame=$('frame');if(!frame.contentWindow||typeof frame.contentWindow.view!=='function'){$('toolstatus').textContent='Carregando recursos. Aguarde um instante e tente novamente.';return}try{frame.contentWindow.view(tab);
  const age=legacyAgeIndex(),doc=frame.contentDocument;
  if(age!==null&&tab==='library'&&typeof frame.contentWindow.tokidsShowAgeLibrary==='function')frame.contentWindow.tokidsShowAgeLibrary(age);
  if(age!==null&&tab==='sensory'){const el=doc?.getElementById('ssAge');if(el){el.value=String(age);el.dispatchEvent(new Event('change',{bubbles:true}))}}
+ if(tab==='sensory')syncLegacyPatientContext();
  if(age!==null&&tab==='foodactivities'){const el=doc?.getElementById('foodActivityFilter');if(el){el.value=age===0?'':age===1?'6–12':age<=3?'1–3':age===4?'4–6':age===5?'7–9':'10–12';el.dispatchEvent(new Event('input',{bubbles:true}))}}
  $('toolstatus').textContent='Exibindo: '+toolNames[tab]+' — conteúdo original do 5.9 (consulta local, não sincronizada).';$('resources').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){$('toolstatus').textContent='Não foi possível abrir este recurso: '+e.message}}
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>showTool(b.dataset.tool)));
@@ -291,7 +320,7 @@ function moveLegacy(dest,tool){if(legacySection.parentElement!==dest)dest.append
 function moveClinical(dest,preferred){if(clinicalSection.parentElement!==dest)dest.append(clinicalSection);
  if(preferred){const sel=$('moduletype');const opts=Array.from(sel.options);const target=opts.find(o=>o.value===preferred)||opts.find(o=>o.textContent.toLowerCase().includes(preferred));if(target){sel.value=target.value;sel.dispatchEvent(new Event('change'))}}
 }
-function openPage(id){if(!moduleSections[id])return;currentPage=id;
+function openPage(id){if(!moduleSections[id])return;currentPage=id;updateActivePatientUI();
  if(['sensory','feeding','library'].includes(id))moveLegacy(moduleSections[id],id==='sensory'?'sensory':id==='feeding'?'foodactivities':'library');
  if(['planning','progress','reports'].includes(id))moveClinical(moduleSections[id],id==='progress'?'evolucao':id==='planning'?'plano_terapeutico':null);
  for(const [key,el] of Object.entries(moduleSections))el.hidden=key!==id;
@@ -303,5 +332,5 @@ document.querySelectorAll('.dashboard-tile').forEach(b=>b.addEventListener('clic
 $('homebutton').onclick=()=>{$('dashboard').scrollIntoView({behavior:'smooth',block:'start'})};
 openPage('patients');
 // The embedded local library is kept functional but its second app header/menu is hidden.
-$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.1');d.title='TO Kids PRO 6.9.1 — Recursos terapêuticos';}catch(e){}});
+$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.1');d.title='TO Kids PRO — Recursos terapêuticos';syncLegacyPatientContext();}catch(e){}});
 </script></body></html>
