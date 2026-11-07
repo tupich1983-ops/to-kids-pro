@@ -1,9 +1,5 @@
-TO Kids PRO 6.9 - TESTE, SOMENTE DADOS FICTICIOS
-
-Novidades: lista clicavel de pacientes; prontuario com historico; data de nascimento e idade calculada; diagnostico informado e situacao; sugestoes educativas por idade; biblioteca original filtrada por faixas; biografia e contato do criador, foto pendente.
-
-URL e chave publica Supabase lembradas no navegador; a sessao Supabase pode permanecer conectada. NAO guarda senha em codigo. Sair encerra a sessao. Use apenas chave publishable/anon, nunca service_role/secret.
-
-Os recursos antigos no iframe painel.html sao demonstracao local, NAO sincronizam com Supabase, e URL direta nao tem protecao. Nao usar dados reais ate concluir seguranca e validacao clinica. O diagnostico informado nao substitui avaliacao individual.
-
-Hospedagem: publicar arquivos descompactados na raiz do repositorio GitHub Pages. Nao enviar backups ou segredos.
+TO Kids PRO 6.9.1 — login direto.
+Projeto Supabase e chave PUBLICÁVEL configurados no index.html.
+Apenas e-mail e senha são solicitados. A sessão pode persistir no navegador.
+Não armazene senhas no código. Não utilize pacientes reais: versão de testes.
+Substitua os arquivos do repositório GitHub pelos arquivos DE DENTRO deste ZIP.
