@@ -228,25 +228,64 @@ function updateActivePatientUI(){
  bar.textContent=msg;
  if($('resourcepatient'))$('resourcepatient').textContent=p?'Consultando recursos para '+p.nome+' ('+ageLabel(p)+'). Diagnóstico informado: '+(p.dados?.diagnostico||'não informado')+'. A seleção é compartilhada com a Central Clínica; os recursos antigos continuam apenas locais.':'Selecione um paciente no módulo Pacientes.';
 }
+// Mantém o paciente do prontuário visível no módulo legado, inclusive
+// quando o catálogo reconstrói seus campos depois de mudar os filtros.
+let legacyContextObserver=null, legacyContextDoc=null, legacyContextScheduled=false;
 function syncLegacyPatientContext(){
- const p=patientRows.find(x=>x.id===selectedPatientId),doc=$('frame').contentDocument;
- if(!p||!doc)return;
- const age=legacyAgeIndex();
- const legacyPatient=doc.getElementById('ssPatient');
- if(legacyPatient){
-  // A lista legada é local e não contém os pacientes do Supabase.
-  // Evita seleção enganosa de outro cadastro e mostra o paciente correto.
+  const p=patientRows.find(x=>x.id===selectedPatientId);
+  const doc=$('frame').contentDocument;
+  if(!doc||!doc.body)return;
+  const legacyPatient=doc.getElementById('ssPatient');
+  if(!legacyPatient)return;
+
+  // O cadastro do Supabase é a fonte do paciente ativo. Não preencher
+  // a lista local com nomes falsos nem vincular formulários locais ao banco.
   const label=legacyPatient.previousElementSibling;
   if(label&&label.tagName==='LABEL')label.style.display='none';
   legacyPatient.style.display='none';
   let info=doc.getElementById('supabasePatientContext');
-  if(!info){info=doc.createElement('p');info.id='supabasePatientContext';info.style.cssText='padding:12px;border-radius:8px;background:#e1f3ee;border:1px solid #7bc5b5;font-weight:700';legacyPatient.parentNode.insertBefore(info,legacyPatient)}
-  info.textContent='Paciente ativo no Supabase: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Sem diagnóstico informado')+'. Não salve formulários do painel antigo: eles não estão vinculados ao prontuário.';
- }
- const dx=doc.getElementById('ssDx');
- if(dx){const d=(p.dados?.diagnostico||'').toLowerCase();const option=[...dx.options].find(o=>o.value.toLowerCase()===d||o.textContent.toLowerCase()===d);if(option){dx.value=option.value;dx.dispatchEvent(new Event('change',{bubbles:true}))}}
- if(age!==null){const el=doc.getElementById('ssAge');if(el){el.value=String(age);el.dispatchEvent(new Event('change',{bubbles:true}))}}
+  if(!info){
+    info=doc.createElement('div');
+    info.id='supabasePatientContext';
+    info.setAttribute('role','status');
+    info.style.cssText='padding:12px 14px;margin:10px 0;border-radius:9px;background:#e1f3ee;border:1px solid #7bc5b5;font-weight:700;color:#164b4c';
+    legacyPatient.parentNode.insertBefore(info,legacyPatient);
+  }
+  const context=p
+    ?'Paciente ativo: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Diagnóstico não informado')+'. Atividades para consulta; registros do painel antigo não são salvos no prontuário.'
+    :'Nenhum paciente ativo. Abra um paciente no módulo Pacientes antes de consultar as atividades.';
+  if(info.textContent!==context)info.textContent=context;
+  if(!p)return;
+  const dx=doc.getElementById('ssDx');
+  if(dx){
+    const diagnosis=(p.dados?.diagnostico||'').trim().toLowerCase();
+    const option=[...dx.options].find(o=>o.value.toLowerCase()===diagnosis||o.textContent.toLowerCase()===diagnosis);
+    if(option&&dx.value!==option.value){dx.value=option.value;dx.dispatchEvent(new Event('change',{bubbles:true}));}
+  }
+  const age=legacyAgeIndex();
+  if(age!==null){
+    const el=doc.getElementById('ssAge');
+    if(el&&el.value!==String(age)){el.value=String(age);el.dispatchEvent(new Event('change',{bubbles:true}));}
+  }
 }
+function installLegacyContextObserver(){
+  const doc=$('frame').contentDocument;
+  if(!doc||!doc.body)return;
+  if(legacyContextObserver&&legacyContextDoc===doc)return;
+  if(legacyContextObserver)legacyContextObserver.disconnect();
+  legacyContextDoc=doc;
+  legacyContextObserver=new MutationObserver(()=>{
+    if(legacyContextScheduled)return;
+    legacyContextScheduled=true;
+    setTimeout(()=>{
+      legacyContextScheduled=false;
+      if($('frame').contentDocument===doc)syncLegacyPatientContext();
+    },0);
+  });
+  legacyContextObserver.observe(doc.body,{childList:true,subtree:true});
+  syncLegacyPatientContext();
+}
+
 function legacyAgeIndex(){const p=patientRows.find(x=>x.id===selectedPatientId),m=monthsOld(p);if(m===null)return null;return m<=6?0:m<=12?1:m<=24?2:m<=36?3:m<=72?4:m<=108?5:6}
 function showTool(tab){const frame=$('frame');if(!frame.contentWindow||typeof frame.contentWindow.view!=='function'){$('toolstatus').textContent='Carregando recursos. Aguarde um instante e tente novamente.';return}try{frame.contentWindow.view(tab);
  const age=legacyAgeIndex(),doc=frame.contentDocument;
@@ -332,5 +371,5 @@ document.querySelectorAll('.dashboard-tile').forEach(b=>b.addEventListener('clic
 $('homebutton').onclick=()=>{$('dashboard').scrollIntoView({behavior:'smooth',block:'start'})};
 openPage('patients');
 // The embedded local library is kept functional but its second app header/menu is hidden.
-$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.1');d.title='TO Kids PRO — Recursos terapêuticos';syncLegacyPatientContext();}catch(e){}});
+$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.1');d.title='TO Kids PRO — Recursos terapêuticos';installLegacyContextObserver();}catch(e){}});
 </script></body></html>
