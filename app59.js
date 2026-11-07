@@ -318,3 +318,12 @@ const foodTherapyActivities=[["Exposição repetida sem pressão", "2–12 anos"
 const foodEvidenceRefs=[["Johnson et al., 2019 — Parent Training for Feeding Problems in Children With Autism Spectrum Disorder", "https://pubmed.ncbi.nlm.nih.gov/30101320/"], ["Sharp et al., 2019 — The Autism MEAL Plan", "https://pubmed.ncbi.nlm.nih.gov/31056202/"], ["Akyurek e Senturk, 2025 — revisão sistemática", "https://pubmed.ncbi.nlm.nih.gov/40850595/"]];
 function renderFoodActivities(){let items=foodTherapyActivities;app.innerHTML=`<section><h2>Biblioteca clínica • seletividade alimentar</h2><p class="muted">Atividades inspiradas em princípios pesquisados. As propostas individuais abaixo NÃO são protocolos validados nem garantem eficácia. Evite coerção e investigue disfagia, dor, perda ponderal e desidratação.</p><label>Filtrar por faixa ou termo</label><input id="foodActivityFilter" placeholder="Ex.: 3–12, exposição, postura" oninput="filterFoodActivities()"><div id="foodActivityResults"></div></section><section><h3>Referências científicas</h3>${foodEvidenceRefs.map(r=>`<p><a href="${r[1]}" target="_blank" rel="noopener noreferrer">${esc(r[0])}</a></p>`).join('')}<p class="muted">A evidência é principalmente de intervenções multicomponentes; não atribua resultados de um programa a cada atividade isolada. Avalie contexto, segurança, alimentação e participação com equipe interdisciplinar.</p></section>`;filterFoodActivities()}
 function filterFoodActivities(){let q=(document.getElementById('foodActivityFilter')?.value||'').toLowerCase();let matches=foodTherapyActivities.filter(a=>a.join(' ').toLowerCase().includes(q));document.getElementById('foodActivityResults').innerHTML=matches.map((a,i)=>`<details class="activity"><summary><b>${esc(a[0])}</b> <small>• ${esc(a[1])}</small></summary><p><b>Força da evidência:</b> ${esc(a[2])}</p><p><b>Princípio:</b> ${esc(a[3])}</p><p><b>Materiais:</b> ${esc(a[4])}</p><p><b>Passo a passo:</b> ${esc(a[5])}</p><p><b>Indicador de evolução:</b> ${esc(a[6])}</p></details>`).join('')||'<p>Nenhuma atividade encontrada.</p>'}
+
+
+// Catálogo de consulta por faixa etária; não altera dados do prontuário.
+window.tokidsShowAgeLibrary=function(index){
+ const ix=Number(index);
+ if(!Number.isInteger(ix)||ix<0||ix>=ages.length){view('library');return}
+ const filtered=data.filter(a=>Number(a[1])===ix);
+ app.innerHTML='<section><h2>Biblioteca de atividades — '+esc(ages[ix])+'</h2><p class="muted">Atividades demonstrativas por faixa etária. Avaliação individual obrigatória.</p>'+cards(filtered)+'</section>';
+};
