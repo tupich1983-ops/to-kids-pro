@@ -1,5 +1,9 @@
-TO Kids PRO 6.8 - TESTE - Navegacao unificada e modulo Sobre o Criador.
+TO Kids PRO 6.9 - TESTE, SOMENTE DADOS FICTICIOS
 
-Substitua os arquivos no GitHub Pages. Nao mude o Supabase. Nao use dados reais.
-Os recursos do painel 5.9 permanecem locais e nao sincronizados; o painel.html ainda pode ser acessado diretamente por URL, sem login.
-A nova interface reorganiza os modulos existentes; nao altera as tabelas Supabase.
+Novidades: lista clicavel de pacientes; prontuario com historico; data de nascimento e idade calculada; diagnostico informado e situacao; sugestoes educativas por idade; biblioteca original filtrada por faixas; biografia e contato do criador, foto pendente.
+
+URL e chave publica Supabase lembradas no navegador; a sessao Supabase pode permanecer conectada. NAO guarda senha em codigo. Sair encerra a sessao. Use apenas chave publishable/anon, nunca service_role/secret.
+
+Os recursos antigos no iframe painel.html sao demonstracao local, NAO sincronizam com Supabase, e URL direta nao tem protecao. Nao usar dados reais ate concluir seguranca e validacao clinica. O diagnostico informado nao substitui avaliacao individual.
+
+Hospedagem: publicar arquivos descompactados na raiz do repositorio GitHub Pages. Nao enviar backups ou segredos.
