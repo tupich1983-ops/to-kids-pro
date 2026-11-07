@@ -1,39 +1,6 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TO Kids PRO 6.9.3 — Paciente integrado</title><style>
-*{box-sizing:border-box}body{margin:0;font:16px system-ui;background:#edf5f2;color:#183f3d}header{background:#164b4c;color:white;padding:22px}main{max-width:960px;margin:25px auto;padding:0 14px}section{background:white;border-radius:14px;padding:22px;box-shadow:0 3px 14px #0001;margin-bottom:16px}label{display:block;font-weight:650;margin-top:13px}input,select,textarea{width:100%;padding:12px;margin-top:5px;border:1px solid #9fbdb6;border-radius:8px;font:inherit}button{border:0;border-radius:8px;background:#147d71;color:white;font:inherit;font-weight:650;padding:12px 17px;cursor:pointer;margin:12px 8px 0 0}.secondary{background:#e1eeea;color:#164b4c}.note{background:#fff2d6;padding:12px;border-radius:8px}.err{color:#b12525}fieldset{border:1px solid #c5d9d4;border-radius:10px;margin:14px 0;padding:12px}legend{font-weight:750}.history{border:1px solid #d5e3df;border-radius:10px;padding:12px;margin:10px 0}iframe{border:0;width:100%;height:90vh;min-height:640px;background:white;border-radius:10px}.quicktools{display:flex;flex-wrap:wrap;gap:6px}.quicktools button{margin:4px 0;background:#147d71;color:white;flex:1 1 175px;min-height:52px}.quicktools button:focus-visible{outline:3px solid #ffb84d;outline-offset:2px}.topnav{display:flex;gap:10px;flex-wrap:wrap;padding:10px 2px}.topnav a{background:#d8ebe5;color:#164b4c;padding:12px;border-radius:9px;text-decoration:none;font-weight:700}#app{padding:12px}#status{white-space:pre-wrap}[hidden]{display:none!important}
-/* Navegação unificada 6.9.3 */
-header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px;margin:14px auto}
-#app{padding:0;background:transparent;box-shadow:none}#app>section{margin:0}
-#app .topnav{display:none}
-.dashboard-head{padding:18px 20px 8px}.dashboard-head h2{margin:0 0 5px}.dashboard-head p{margin:0;color:#58736f}
-.dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:18px 0}
-.dashboard-tile{background:#fff;color:#194d4b;border:1px solid #c9dfd8;box-shadow:0 3px 10px #173f3a0d;border-radius:14px;padding:20px 12px;margin:0;min-height:112px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:9px;text-align:center;font-size:15px}
-.dashboard-tile .tile-icon{font-size:30px;line-height:1}.dashboard-tile:hover,.dashboard-tile:focus-visible{background:#e5f3ef;border-color:#168778}
-.dashboard-tile.active{background:#147d71;color:white;border-color:#147d71}
-.workspace{background:white;border-radius:14px;padding:18px;box-shadow:0 3px 14px #0001;min-height:240px}
-.workspace>.workpanel{margin:0;padding:0;box-shadow:none}.workspace>.workpanel>section{box-shadow:none;border:1px solid #e1ece8}
-.workspace>.workpanel[hidden]{display:none!important}.work-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #e1ece8;margin-bottom:16px;padding-bottom:12px}
-.work-toolbar h3{margin:0}.work-toolbar button{margin:0}
-#resources .quicktools{display:flex;flex-wrap:wrap;gap:8px}#resources .quicktools button{margin:0;font-size:13px}
-#resources iframe{height:78vh;min-height:560px;border:1px solid #d5e5df;border-radius:12px}
-#legacy-info{font-size:13px;color:#59746d}
-.creator-profile{max-width:780px;line-height:1.7}.creator-profile h3{font-size:25px;margin-bottom:0}.creator-profile .role{color:#147d71;font-weight:650}.creator-profile p{margin:12px 0}
-@media(max-width:700px){.dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.dashboard-tile{min-height:96px;padding:12px 7px;font-size:13px}.dashboard-tile .tile-icon{font-size:25px}.workspace{padding:12px}.dashboard-head{padding:12px 8px 0}main{padding:0 8px}}
-@media print{.dashboard-grid,.work-toolbar,.topnav,#gate,header{display:none!important}.workpanel[hidden]{display:none!important}}
- .creator-photo{border:2px dashed #a3c8c0;border-radius:18px;width:180px;height:170px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#eef6f3;color:#365f5c;font-size:32px;margin:8px 0 20px}.creator-photo small{font-size:12px}.contact-link{display:inline-block;padding:12px 18px;background:#147d71;color:white;border-radius:9px;text-decoration:none} .patient-button:hover{outline:2px solid #147d71} #patientprofile{margin-top:18px} </style></head><body><header><h2>TO Kids PRO 6.9.3 • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status"></p></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.3</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
-<div class="dashboard-grid" id="dashboard" aria-label="Módulos principais">
-<button class="dashboard-tile" type="button" data-page="patients"><span class="tile-icon">👶</span>Pacientes</button>
-<button class="dashboard-tile" type="button" data-page="evaluation"><span class="tile-icon">📋</span>Avaliação completa</button>
-<button class="dashboard-tile" type="button" data-page="sensory"><span class="tile-icon">🧠</span>Desenvolvimento sensoriomotor</button>
-<button class="dashboard-tile" type="button" data-page="feeding"><span class="tile-icon">🍽️</span>Seletividade alimentar</button>
-<button class="dashboard-tile" type="button" data-page="library"><span class="tile-icon">📚</span>Biblioteca de atividades</button>
-<button class="dashboard-tile" type="button" data-page="planning"><span class="tile-icon">🗓️</span>Planejar sessões</button>
-<button class="dashboard-tile" type="button" data-page="progress"><span class="tile-icon">✍️</span>Evoluções clínicas</button>
-<button class="dashboard-tile" type="button" data-page="reports"><span class="tile-icon">📄</span>Relatórios</button>
-<button class="dashboard-tile" type="button" data-page="creator"><span class="tile-icon">👤</span>Sobre o criador</button>
-</div>
-<div class="workspace" id="workspace"><div class="work-toolbar"><h3 id="worktitle">Pacientes</h3><button type="button" id="homebutton" class="secondary">↑ Voltar ao menu</button></div><div id="workpanels"></div></div>
-<nav class="topnav" aria-label="Navegação principal"><a href="#clinical">Central Clínica</a><a href="#resources" id="resourceslink">Biblioteca e sugestões</a><a href="#wizard">Avaliação completa</a></nav>
-<section id="resources"><h3>Biblioteca e recursos terapêuticos</h3><p class="note">As 100 fichas ilustradas, o desenvolvimento sensoriomotor e a biblioteca de seletividade alimentar estão reunidos aqui no aplicativo 6.9.3. <b>São recursos locais de consulta:</b> seus formulários antigos não sincronizam com o Supabase. Para prontuários, use a Central Clínica acima.</p>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TO Kids PRO 6.6 — Acesso de teste</title><style>
+*{box-sizing:border-box}body{margin:0;font:16px system-ui;background:#edf5f2;color:#183f3d}header{background:#164b4c;color:white;padding:22px}main{max-width:960px;margin:25px auto;padding:0 14px}section{background:white;border-radius:14px;padding:22px;box-shadow:0 3px 14px #0001;margin-bottom:16px}label{display:block;font-weight:650;margin-top:13px}input,select,textarea{width:100%;padding:12px;margin-top:5px;border:1px solid #9fbdb6;border-radius:8px;font:inherit}button{border:0;border-radius:8px;background:#147d71;color:white;font:inherit;font-weight:650;padding:12px 17px;cursor:pointer;margin:12px 8px 0 0}.secondary{background:#e1eeea;color:#164b4c}.note{background:#fff2d6;padding:12px;border-radius:8px}.err{color:#b12525}fieldset{border:1px solid #c5d9d4;border-radius:10px;margin:14px 0;padding:12px}legend{font-weight:750}.history{border:1px solid #d5e3df;border-radius:10px;padding:12px;margin:10px 0}iframe{border:0;width:100%;height:90vh;min-height:640px;background:white;border-radius:10px}.quicktools{display:flex;flex-wrap:wrap;gap:6px}.quicktools button{margin:4px 0;background:#147d71;color:white;flex:1 1 175px;min-height:52px}.quicktools button:focus-visible{outline:3px solid #ffb84d;outline-offset:2px}.topnav{display:flex;gap:10px;flex-wrap:wrap;padding:10px 2px}.topnav a{background:#d8ebe5;color:#164b4c;padding:12px;border-radius:9px;text-decoration:none;font-weight:700}#app{padding:12px}#status{white-space:pre-wrap}[hidden]{display:none!important}</style></head><body><header><h2>TO Kids PRO 6.7 • Teste integrado</h2><div>Autenticação Supabase antes do painel clínico</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Conectar ao Supabase</h3><label>Project URL</label><input id="url" placeholder="https://projeto.supabase.co" autocomplete="off"><label>Publishable key ou anon key</label><input id="key" type="password" autocomplete="off"><button id="connect">Conectar</button><div id="credentials" hidden><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status"></p></section><section id="app" hidden><nav class="topnav" aria-label="Navegação principal"><a href="#clinical">Central Clínica</a><a href="#resources" id="resourceslink">Biblioteca e sugestões</a><a href="#wizard">Avaliação completa</a></nav>
+<section id="resources"><h3>Biblioteca e recursos terapêuticos</h3><p class="note">As 100 fichas ilustradas, o desenvolvimento sensoriomotor e a biblioteca de seletividade alimentar estão reunidos aqui no aplicativo 6.7. <b>São recursos locais de consulta:</b> seus formulários antigos não sincronizam com o Supabase. Para prontuários, use a Central Clínica acima.</p>
 <div class="quicktools" role="group" aria-label="Recursos terapêuticos">
 <button type="button" class="secondary" data-tool="library">100 atividades ilustradas</button>
 <button type="button" class="secondary" data-tool="sensory">Desenvolvimento sensoriomotor</button>
@@ -47,15 +14,15 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 <p id="toolstatus" role="status" style="font-size:14px;color:#365e58">Selecione um recurso acima.</p>
 <iframe id="frame" title="Recursos terapêuticos e biblioteca do TO Kids PRO 5.9" loading="eager"></iframe>
 </section>
-<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Painel clínico — ambiente de teste</b><div id="who"></div></div><button id="logout" class="secondary">Sair</button></div><p class="note"><b>Teste 6.9.3:</b> os pacientes e registros criados nos formulários abaixo são salvos no Supabase. Os formulários novos abaixo salvam no Supabase. O painel legado 5.9 continua local, sem sincronização, e sua URL direta não é protegida por login. Não cadastre pacientes reais.</p>
-<section><h3>Pacientes fictícios — Supabase</h3><label>Código fictício</label><input id="newcode" placeholder="EX.: TESTE-003"><label>Data de nascimento fictícia</label><input type="date" id="newbirth"><label>Faixa etária (opcional, para cadastros sem data)</label><input id="newage" placeholder="Ex.: 4 anos ou 6 meses"><label>Diagnóstico informado (opcional)</label><select id="newdiagnosis"><option value="">Sem diagnóstico informado</option><option>Transtorno do Espectro Autista (TEA)</option><option>Paralisia cerebral</option><option>Síndrome de Down</option><option>Atraso do Desenvolvimento Neuropsicomotor (ADNPM)</option><option>Deficiência intelectual</option><option>Transtorno do Déficit de Atenção/Hiperatividade (TDAH)</option><option>Transtorno do Desenvolvimento da Coordenação (TDC)</option><option>Transtornos específicos da aprendizagem</option><option>Transtornos da comunicação e da linguagem</option><option>Síndrome do X Frágil</option><option>Síndrome de Rett</option><option>Síndrome de Angelman</option><option>Espinha bífida (mielomeningocele)</option><option>Lesão encefálica adquirida</option><option>Doenças neuromusculares</option><option>Epilepsia</option><option>Outra condição neurológica ou do neurodesenvolvimento</option></select><label>Nível de suporte do TEA (conforme documentação clínica)</label><select id="newtealevel"><option value="">Não informado / não se aplica</option><option value="1">Nível 1</option><option value="2">Nível 2</option><option value="3">Nível 3</option></select><label>Outro diagnóstico / condições associadas (opcional)</label><input id="newdiagnosisother" placeholder="Descrição fictícia"><label>Situação diagnóstica</label><select id="newdiagnosisstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="createpatient">Salvar paciente no Supabase</button><button id="refresh" class="secondary">Atualizar lista</button><p id="patientfeedback" role="status"></p><h4>Pacientes cadastrados — clique para abrir</h4><div id="patientlist"></div><article id="patientprofile" class="history" hidden><h3 id="selectedname"></h3><p id="selectedmeta"></p><label>Atualizar data de nascimento fictícia</label><input type="date" id="editbirth"><label>Diagnóstico informado</label><input id="editdiagnosis" placeholder="Opcional"><label>Nível de suporte do TEA</label><select id="edittealevel"><option value="">Não informado / não se aplica</option><option value="1">Nível 1</option><option value="2">Nível 2</option><option value="3">Nível 3</option></select><label>Situação diagnóstica</label><select id="editstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="updatepatient" type="button">Atualizar cadastro</button><h4>Histórico do paciente</h4><div id="patienthistory"></div><h4>Sugestões iniciais por faixa etária</h4><div id="patientrecommendations"></div><p class="note">Sugestões educativas por idade, não prescrições. Considere avaliação individual e preferências da criança.</p><button id="patientactivities" type="button">Abrir biblioteca de atividades</button><button id="patientassessment" type="button" class="secondary">Abrir avaliação completa</button></article></section>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Painel clínico — ambiente de teste</b><div id="who"></div></div><button id="logout" class="secondary">Sair</button></div><p class="note"><b>Teste 6.7:</b> os pacientes e registros criados nos formulários abaixo são salvos no Supabase. Os formulários novos abaixo salvam no Supabase. O painel legado 5.9 continua local, sem sincronização, e sua URL direta não é protegida por login. Não cadastre pacientes reais.</p>
+<section><h3>Pacientes fictícios — Supabase</h3><label>Código fictício</label><input id="newcode" placeholder="EX.: TESTE-003"><label>Faixa etária</label><input id="newage" placeholder="Ex.: 4–6 anos"><button id="createpatient">Salvar paciente no Supabase</button><button id="refresh" class="secondary">Atualizar lista</button><div id="patientlist"></div></section>
 <section><h3>Registro clínico fictício — Supabase</h3><label>Paciente</label><select id="recordpatient"></select><label>Tipo</label><select id="recordtype"><option value="avaliacao">Avaliação</option><option value="evolucao">Evolução</option><option value="plano_terapeutico">Plano terapêutico</option><option value="seletividade_alimentar">Seletividade alimentar</option><option value="desenvolvimento_sensoriomotor">Desenvolvimento sensoriomotor</option></select><label>Título</label><input id="recordtitle" placeholder="Registro fictício"><label>Observação</label><input id="recordnote" placeholder="Somente dados fictícios"><button id="createrecord">Salvar registro no Supabase</button><div id="recordlist"></div></section>
 <section><h3>Avaliação infantil estruturada — Supabase (teste)</h3><p class="note">Formulário inicial de oito domínios, não padronizado. Não substitui instrumentos validados nem avaliação clínica.</p><label>Paciente fictício</label><select id="evalpatient"></select><label>Data da avaliação</label><input type="date" id="evaldate"><label>Demanda principal (fictícia)</label><input id="evaldemand" placeholder="Ex.: participação em brincadeiras"><div id="evaldomains"></div><label>Observações e contexto funcional</label><textarea id="evalnotes" rows="3" placeholder="Somente dados fictícios"></textarea><button id="saveeval">Salvar avaliação no Supabase</button><h4>Avaliações salvas no Supabase</h4><div id="evallist"></div></section>
-<section id="wizard"><span id="wizardpanel"></span><h3>Avaliação pediátrica completa — por etapas (teste 6.9.3)</h3><p class="note">Formulário clínico descritivo não padronizado. Salve o rascunho neste dispositivo ou conclua para registrar no Supabase. Use somente pacientes fictícios.</p><label>Paciente fictício</label><select id="wizardpatient"></select><div id="wizardprogress" role="status"></div><div id="wizardform"></div><button class="secondary" id="wizardprev">Voltar</button><button class="secondary" id="wizardnext">Próxima etapa</button><button class="secondary" id="wizarddraft">Salvar rascunho neste dispositivo</button><button id="wizardfinish">Concluir e salvar no Supabase</button><p id="wizardstatus" role="status"></p><h4>Avaliações completas já salvas</h4><div id="wizardhistory"></div></section>
+<section id="wizard"><span id="wizardpanel"></span><h3>Avaliação pediátrica completa — por etapas (teste 6.5)</h3><p class="note">Formulário clínico descritivo não padronizado. Salve o rascunho neste dispositivo ou conclua para registrar no Supabase. Use somente pacientes fictícios.</p><label>Paciente fictício</label><select id="wizardpatient"></select><div id="wizardprogress" role="status"></div><div id="wizardform"></div><button class="secondary" id="wizardprev">Voltar</button><button class="secondary" id="wizardnext">Próxima etapa</button><button class="secondary" id="wizarddraft">Salvar rascunho neste dispositivo</button><button id="wizardfinish">Concluir e salvar no Supabase</button><p id="wizardstatus" role="status"></p><h4>Avaliações completas já salvas</h4><div id="wizardhistory"></div></section>
 <section id="clinical"><h3>Central clínica integrada — versão de teste</h3><p class="note">Formulários clínicos descritivos, não padronizados. Não fazem diagnóstico automático. Use exclusivamente códigos e dados fictícios.</p><label>Paciente fictício</label><select id="modulepatient"></select><label>Módulo</label><select id="moduletype"></select><div id="moduleform"></div><button id="savemodule">Salvar módulo no Supabase</button><button id="clearform" class="secondary">Limpar formulário</button><h4>Histórico clínico deste paciente</h4><div id="modulehistory"></div><button id="printreport" class="secondary">Imprimir / salvar relatório PDF</button></section>
 </section></main><script type="module">
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const $=id=>document.getElementById(id);let client=null,patientRows=[],allRecords=[],selectedPatientId=null;
+const $=id=>document.getElementById(id);let client=null,patientRows=[],allRecords=[];
 const domains=['Participação em AVDs','Motricidade global','Motricidade fina','Processamento sensorial','Comunicação funcional','Brincar e interação','Cognição e planejamento','Participação escolar'];
 const levels=[['nao_avaliado','Não avaliado'],['autonomo','Participa sem ajuda'],['apoio_parcial','Participa com apoio'],['apoio_intenso','Necessita apoio intenso'],['nao_observado','Não observado']];
 for(let i=0;i<domains.length;i++){const wrap=document.createElement('div');const lab=document.createElement('label');lab.textContent=domains[i];wrap.append(lab);const sel=document.createElement('select');sel.id='domain'+i;for(const [v,t] of levels){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o)}wrap.append(sel);$('evaldomains').append(wrap)}
@@ -63,97 +30,40 @@ $('evaldate').value=new Date().toISOString().slice(0,10);
 
 function clean(t){return String(t??'')}
 function setText(id,t){$(id).textContent=t}
-function monthsOld(p){
- if(p?.data_nascimento){const d=new Date(p.data_nascimento+'T12:00:00'),now=new Date();let m=(now.getFullYear()-d.getFullYear())*12+now.getMonth()-d.getMonth();if(now.getDate()<d.getDate())m--;return m>=0&&m<=144?m:null;}
- const a=String(p?.dados?.faixa_etaria||'').toLowerCase();const n=parseInt(a,10);if(!Number.isFinite(n))return null;return a.includes('mes')?n:(a.includes('ano')||/^\d{1,2}$/.test(a))?n*12:null;
-}
-function ageLabel(p){const m=monthsOld(p);if(m===null)return p?.dados?.faixa_etaria||'Idade não informada';return m<12?m+' meses':Math.floor(m/12)+' anos'+(m%12?' e '+m%12+' meses':'')}
-const recBands=[
- {max:5,name:'0 a 5 meses',motor:'Tempo de bruços supervisionado enquanto acordado, conforme tolerância; acompanhar objetos com o olhar.',communication:'Interação face a face, vocalizações e resposta à voz do cuidador.',feeding:'Aleitamento ou alimentação láctea orientada pela equipe; não sugerir sólidos antes da idade e prontidão adequadas.'},
- {max:11,name:'6 a 11 meses',motor:'Alcançar brinquedos seguros, explorar texturas apropriadas e brincar no chão com supervisão.',communication:'Turnos de sons, imitação de gestos e livros de imagens.',feeding:'Introdução alimentar conforme prontidão e orientações pediátricas, com texturas seguras; evitar risco de engasgo.'},
- {max:23,name:'12 a 23 meses',motor:'Encaixes grandes, empilhar blocos e exploração motora em ambiente seguro.',communication:'Nomear objetos, gestos funcionais, livros e brincadeiras compartilhadas.',feeding:'Explorar variedade de alimentos e utensílios apropriados com supervisão.'},
- {max:35,name:'2 anos',motor:'Circuitos simples, encaixes e manipulação de objetos grandes.',communication:'Brincadeiras de faz de conta, nomeação e interação com adultos.',feeding:'Participar da rotina de refeições e explorar alimentos sem coerção.'},
- {max:47,name:'3 anos',motor:'Massinha, desenhos livres, equilíbrio e jogos de movimento.',communication:'Histórias curtas, brincadeiras simbólicas e turnos de conversa.',feeding:'Participação no preparo simples e exposição gradual a diferentes alimentos.'},
- {max:59,name:'4 anos',motor:'Pinça, recortes supervisionados, blocos, jogos de coordenação e equilíbrio.',communication:'Narrativas, faz de conta, jogos de regras simples e comunicação funcional.',feeding:'Autonomia progressiva com utensílios, participação nas refeições e exploração sem pressão.'},
- {max:71,name:'5 anos',motor:'Coordenação bilateral, desenho, circuitos motores e brincadeiras em grupo.',communication:'Histórias sequenciadas, jogos de turnos e consciência sonora lúdica.',feeding:'Planejar lanches simples com supervisão e ampliar participação nas refeições.'},
- {max:95,name:'6 a 7 anos',motor:'Grafomotricidade funcional, jogos de coordenação e organização de materiais.',communication:'Jogos cooperativos, narrativas e participação escolar.',feeding:'Autonomia em rotinas de lanche e preparação segura de alimentos.'},
- {max:144,name:'8 a 12 anos',motor:'Atividades funcionais, planejamento motor, esportes adaptados às preferências.',communication:'Comunicação social, projetos em grupo e autonomia escolar.',feeding:'Planejamento de refeições e habilidades culinárias seguras, com supervisão.'}
-];
-// Recomendações educativas por perfil; o diagnóstico não substitui a avaliação funcional.
-const diagnosisGuides=[
- {terms:['autis','tea'],label:'TEA',areas:['Brincar e interação','Comunicação funcional','Participação nas rotinas','Regulação sensorial'],ideas:['Brincadeiras de turnos com interesses da criança','Escolhas por imagens, gestos ou comunicação alternativa','Sequências visuais de atividades cotidianas']},
- {terms:['paralisia cerebral'],label:'Paralisia cerebral',areas:['Controle postural','Alcance e preensão','Brincar adaptado','AVDs'],ideas:['Brincar com alcance em posição estável e confortável','Manipular objetos acessíveis com apoio adequado','Treinar participação em vestuário e alimentação com adaptações']},
- {terms:['down'],label:'Síndrome de Down',areas:['Coordenação bilateral','Motricidade fina','Autonomia','Brincar'],ideas:['Encaixes e construções com graduação de desafio','Brincadeiras de coordenação bilateral','Participação em rotinas de autocuidado']},
- {terms:['atraso','adnpm'],label:'Atraso do desenvolvimento',areas:['Brincar','Exploração motora','Comunicação','AVDs'],ideas:['Brincadeiras no nível de habilidade observado','Exploração de objetos e movimentos com apoio','Rotinas de interação e participação funcional']},
- {terms:['intelectual','x frágil','angelman','rett'],label:'Desenvolvimento cognitivo e funcional',areas:['Comunicação acessível','Sequenciamento','AVDs','Participação'],ideas:['Tarefas funcionais divididas em etapas','Apoios visuais e oportunidades de escolha','Atividades significativas com repetição flexível']},
- {terms:['tdah','atenção/hiperatividade'],label:'TDAH',areas:['Organização de rotinas','Autorregulação','Participação escolar'],ideas:['Jogos com turnos e regras graduais','Organização visual de tarefas curtas','Pausas de movimento planejadas conforme necessidade']},
- {terms:['coordenação','tdc'],label:'TDC',areas:['Planejamento motor','Coordenação','AVDs'],ideas:['Prática orientada a objetivos escolhidos pela criança','Sequências de vestir e organizar materiais','Jogos motores graduados e adaptados']},
- {terms:['epilepsia','neuromuscular','espinha bífida','encefálica'],label:'Condição neurológica',areas:['Segurança e acessibilidade','Mobilidade funcional','Brincar adaptado'],ideas:['Brincadeiras acessíveis conforme mobilidade e fadiga','Adaptações de materiais e posicionamento','Participação em rotinas com precauções clínicas individualizadas']}
-];
-function patientGuide(p){const dx=String(p?.dados?.diagnostico||'').toLocaleLowerCase('pt-BR');return diagnosisGuides.find(g=>g.terms.some(t=>dx.includes(t)))||null}
-function activePatientNotice(){let el=document.getElementById('active-patient-notice');if(!el){el=document.createElement('div');el.id='active-patient-notice';el.style.cssText='padding:12px 16px;margin:10px 0;border:1px solid #80c3b8;border-radius:10px;background:#eaf8f3;color:#123c39';document.getElementById('worktitle').insertAdjacentElement('afterend',el)}const p=patientRows.find(x=>x.id===selectedPatientId);el.textContent=p?'Paciente ativo: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Sem diagnóstico informado'):'Nenhum paciente ativo. Abra um paciente na Central Clínica antes de consultar a biblioteca.'}
-function setSelectedPatient(id,show=false){
- if(!patientRows.some(p=>p.id===id))return;
- selectedPatientId=id;
- for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const el=$(name);if(el){el.value=id;el.dispatchEvent(new Event('change'))}}
- renderPatientProfile();activePatientNotice();if(typeof renderIntegratedCare==='function')renderIntegratedCare();
- if(show)openPage('patients');
-}
-function renderPatientProfile(){
- const p=patientRows.find(x=>x.id===selectedPatientId),box=$('patientprofile');box.hidden=!p;if(!p)return;
- $('selectedname').textContent=p.nome;$('selectedmeta').textContent=ageLabel(p)+' · Diagnóstico: '+(p.dados?.diagnostico||'Não informado')+(p.dados?.nivel_suporte_tea?' · TEA nível '+p.dados.nivel_suporte_tea:'')+' · '+(p.dados?.situacao_diagnostica||'não informado');
- $('edittealevel').value=p.dados?.nivel_suporte_tea||'';$('editbirth').value=p.data_nascimento||'';$('editdiagnosis').value=p.dados?.diagnostico||'';$('editstatus').value=p.dados?.situacao_diagnostica||'nao_informado';
- const history=$('patienthistory');history.replaceChildren();
- const recs=allRecords.filter(r=>r.paciente_id===p.id);
- if(!recs.length)history.textContent='Nenhum registro clínico salvo para este paciente.';
- for(const r of recs){const d=document.createElement('details');d.className='history';const h=document.createElement('summary');h.textContent=clean(r.titulo)+' · '+clean(r.tipo)+' · '+new Date(r.criado_em).toLocaleDateString('pt-BR');d.append(h);const pre=document.createElement('pre');pre.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:13px system-ui';pre.textContent=JSON.stringify(r.conteudo,null,2);d.append(pre);history.append(d)}
- const area=$('patientrecommendations');area.replaceChildren();const m=monthsOld(p);if(m===null){area.textContent='Informe a data de nascimento fictícia para visualizar sugestões por idade.';return}
- const band=recBands.find(x=>m<=x.max);if(!band)return;
- const head=document.createElement('strong');head.textContent='Referência: '+band.name;area.append(head);
- const guide=patientGuide(p);if(guide){const h=document.createElement('h4');h.textContent='Prioridades para avaliação: '+guide.label;area.append(h);const a=document.createElement('p');a.textContent='Domínios a considerar: '+guide.areas.join(' • ');area.append(a);for(const idea of guide.ideas){const li=document.createElement('p');li.textContent='• '+idea;area.append(li)}}
- for(const [label,value] of [['Motricidade e exploração',band.motor],['Comunicação e brincar',band.communication],['Alimentação',band.feeding]]){const para=document.createElement('p');const strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));area.append(para)}
-}
 async function refreshData(){
  if(!client)return;
- const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user)return;
- const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,data_nascimento,criado_em').order('criado_em',{ascending:false});
+ const {data:{user},error:ue}=await client.auth.getUser();
+ if(ue||!user)return;
+ const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,criado_em').order('criado_em',{ascending:false});
  if(pe){msg('Erro ao carregar pacientes: '+pe.message,true);return}
  patientRows=pts||[];
- for(const name of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient'])$(name).replaceChildren();
+ $('patientlist').replaceChildren();$('recordpatient').replaceChildren();$('evalpatient').replaceChildren();$('modulepatient').replaceChildren();$('wizardpatient').replaceChildren();
  for(const p of patientRows){
-  const b=document.createElement('button');b.type='button';b.className='secondary patient-button';b.style.cssText='display:block;width:100%;text-align:left;margin:8px 0';b.textContent=p.nome+' · '+ageLabel(p)+' · '+(p.dados?.diagnostico||'Sem diagnóstico informado');b.onclick=()=>setSelectedPatient(p.id);$('patientlist').append(b);
-  for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;$(name).append(o)}
+   const row=document.createElement('p');row.textContent=clean(p.nome)+' · '+clean(p.dados?.faixa_etaria||'');$('patientlist').append(row);
+   const opt=document.createElement('option');opt.value=p.id;opt.textContent=p.nome;$('recordpatient').append(opt);const eo=opt.cloneNode(true);$('evalpatient').append(eo);$('modulepatient').append(opt.cloneNode(true));$('wizardpatient').append(opt.cloneNode(true));
  }
  const {data:rs,error:re}=await client.from('registros_clinicos').select('paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
  if(re){msg('Erro ao carregar registros: '+re.message,true);return}
- allRecords=rs||[];activePatientNotice();
- if(!patientRows.some(p=>p.id===selectedPatientId))selectedPatientId=patientRows[0]?.id||null;
- if(selectedPatientId)setSelectedPatient(selectedPatientId);
- renderModuleHistory();renderWizardHistory();$('recordlist').replaceChildren();
+ allRecords=rs||[];renderModuleHistory();renderWizardHistory();$('recordlist').replaceChildren();
  for(const r of rs||[]){const row=document.createElement('p');row.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.tipo)+' · '+clean(r.titulo)+' · '+clean(r.conteudo?.observacao);$('recordlist').append(row)}
- $('evallist').replaceChildren();
- for(const r of rs.filter(x=>x.tipo==='avaliacao'&&x.conteudo?.formato==='avaliacao_estruturada_v1')){
-  const el=document.createElement('article');el.className='history';const title=document.createElement('strong');title.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.conteudo.data||'')+' · '+clean(r.titulo);el.append(title);$('evallist').append(el)
- }
+$('evallist').replaceChildren();
+for(const r of (rs||[]).filter(x=>x.tipo==='avaliacao'&&x.conteudo?.formato==='avaliacao_estruturada_v1')){
+ const el=document.createElement('article');el.style.cssText='padding:12px;margin:8px 0;border:1px solid #ccdcd7;border-radius:8px';
+ const title=document.createElement('strong');title.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.conteudo.data||'')+' · '+clean(r.titulo);
+ el.append(title);
+ const ul=document.createElement('ul');
+ for(const item of r.conteudo.dominios||[]){const li=document.createElement('li');li.textContent=item.dominio+': '+(levels.find(x=>x[0]===item.nivel)?.[1]||item.nivel);ul.append(li)}
+ el.append(ul);const obs=document.createElement('p');obs.textContent='Observações: '+clean(r.conteudo.observacoes);el.append(obs);$('evallist').append(el);
+}
 }
 $('createpatient').onclick=async()=>{
  if(!client)return;
- const code=$('newcode').value.trim().toUpperCase(),age=$('newage').value.trim(),birth=$('newbirth').value||null;
+ const code=$('newcode').value.trim().toUpperCase(),age=$('newage').value.trim();
  if(!/^[A-Z0-9_-]{2,40}$/.test(code))return msg('Use um código fictício de 2 a 40 caracteres.',true);
- if(!birth&&!age)return msg('Informe a data de nascimento fictícia ou uma idade.',true);
- const diagnosis=$('newdiagnosis').value==='Outro'?$('newdiagnosisother').value.trim():$('newdiagnosis').value;
- const {data,error}=await client.from('pacientes').insert({nome:code,data_nascimento:birth,dados:{faixa_etaria:age,diagnostico:diagnosis,nivel_suporte_tea:$('newtealevel').value,diagnostico_associado:$('newdiagnosisother').value.trim(),situacao_diagnostica:$('newdiagnosisstatus').value}}).select('id').single();
- if(error)return msg('Erro ao cadastrar: '+error.message,true);
- $('newcode').value='';$('newage').value='';$('newbirth').value='';await refreshData();if(data?.id)setSelectedPatient(data.id);msg('Paciente fictício cadastrado.');
+ const {error}=await client.from('pacientes').insert({nome:code,dados:{faixa_etaria:age}});
+ if(error)return msg(error.message,true);
+ $('newcode').value='';$('newage').value='';await refreshData();msg('Paciente fictício salvo no Supabase.');
 };
-$('updatepatient').onclick=async()=>{
- const p=patientRows.find(x=>x.id===selectedPatientId);if(!p)return;
- const dados={...p.dados,diagnostico:$('editdiagnosis').value.trim(),nivel_suporte_tea:$('edittealevel').value,situacao_diagnostica:$('editstatus').value};
- const {error}=await client.from('pacientes').update({data_nascimento:$('editbirth').value||null,dados}).eq('id',p.id);
- if(error)return msg('Erro ao atualizar: '+error.message,true);await refreshData();msg('Cadastro fictício atualizado.');
-};
-$('patientactivities').onclick=()=>openPage('library');
-$('patientassessment').onclick=()=>openPage('evaluation');
 $('createrecord').onclick=async()=>{
  const paciente_id=$('recordpatient').value;
  if(!paciente_id)return msg('Cadastre um paciente fictício antes.',true);
@@ -233,13 +143,7 @@ $('printreport').onclick=()=>{const pid=$('modulepatient').value,p=patientRows.f
  const w=window.open('','_blank');if(!w)return msg('Permita a abertura de janela para imprimir.',true);const doc=w.document;doc.title='Relatório fictício - TO Kids PRO';const style=doc.createElement('style');style.textContent='body{font:14px Arial;max-width:800px;margin:40px auto;line-height:1.5}section{page-break-inside:avoid;margin:24px 0}h1{color:#164b4c}small{color:#666}';doc.head.append(style);const h=doc.createElement('h1');h.textContent='TO Kids PRO — Relatório de teste';doc.body.append(h);const warn=doc.createElement('p');warn.textContent='DOCUMENTO FICTÍCIO — NÃO UTILIZAR COMO LAUDO OU PRONTUÁRIO REAL';doc.body.append(warn);const name=doc.createElement('p');name.textContent='Código do paciente: '+p.nome;doc.body.append(name);
  for(const r of recs){const sec=doc.createElement('section'),title=doc.createElement('h2');title.textContent=r.titulo+' — '+clean(r.conteudo.data);sec.append(title);for(const [k,v] of Object.entries(r.conteudo.campos||{})){if(!v)continue;const para=doc.createElement('p');const label=moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;para.textContent=label+': '+v;sec.append(para)}doc.body.append(sec)}w.focus();w.print()};
 const toolNames={library:'Biblioteca das 100 atividades ilustradas',sensory:'Desenvolvimento sensoriomotor',foodactivities:'Atividades de seletividade alimentar',feeding:'Avaliação alimentar (legado)',foodplan:'Plano alimentar (legado)',foodprogress:'Evolução alimentar (legado)',plan:'Planejamento de sessões',advanced:'Marcos do desenvolvimento'};
-function legacyAgeIndex(){const p=patientRows.find(x=>x.id===selectedPatientId),m=monthsOld(p);if(m===null)return null;return m<=6?0:m<=12?1:m<=24?2:m<=36?3:m<=72?4:m<=108?5:6}
-function showTool(tab){const frame=$('frame');if(!frame.contentWindow||typeof frame.contentWindow.view!=='function'){$('toolstatus').textContent='Carregando recursos. Aguarde um instante e tente novamente.';return}try{frame.contentWindow.view(tab);
- const age=legacyAgeIndex(),doc=frame.contentDocument;
- if(age!==null&&tab==='library'&&typeof frame.contentWindow.tokidsShowAgeLibrary==='function')frame.contentWindow.tokidsShowAgeLibrary(age);
- if(tab==='sensory'){const p=patientRows.find(x=>x.id===selectedPatientId),guide=patientGuide(p);const a=doc?.getElementById('ssAge');if(a&&age!==null)a.value=String(age);const dx=doc?.getElementById('ssDx');if(dx&&p){const d=String(p.dados?.diagnostico||'').toLocaleLowerCase('pt-BR');const option=Array.from(dx.options).find(o=>d.includes(o.value.toLocaleLowerCase('pt-BR'))||(d.includes('autis')&&o.value==='TEA')||(d.includes('atenção')&&o.value==='TDAH')||(d.includes('atraso')&&o.value.includes('Atraso')));if(option)dx.value=option.value;}if(a)a.dispatchEvent(new Event('change',{bubbles:true}));const domain=doc?.getElementById('ssDomain');if(domain&&guide){const match=Array.from(domain.options).find(o=>guide.areas.some(x=>o.value.toLowerCase().includes(x.toLowerCase())));if(match)domain.value=match.value;domain.dispatchEvent(new Event('change',{bubbles:true}))}}
- if(age!==null&&tab==='foodactivities'){const el=doc?.getElementById('foodActivityFilter');if(el){el.value=age===0?'':age===1?'6–12':age<=3?'1–3':age===4?'4–6':age===5?'7–9':'10–12';el.dispatchEvent(new Event('input',{bubbles:true}))}}
- const active=patientRows.find(x=>x.id===selectedPatientId);$('toolstatus').textContent='Exibindo: '+toolNames[tab]+(active?' • Paciente ativo: '+active.nome+' ('+ageLabel(active)+')':' • Selecione um paciente na Central Clínica')+' — recursos locais de consulta; formulários legados não sincronizam.';$('resources').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){$('toolstatus').textContent='Não foi possível abrir este recurso: '+e.message}}
+function showTool(tab){const frame=$('frame');if(!frame.contentWindow||typeof frame.contentWindow.view!=='function'){$('toolstatus').textContent='Carregando recursos. Aguarde um instante e tente novamente.';return}try{frame.contentWindow.view(tab);$('toolstatus').textContent='Exibindo: '+toolNames[tab]+' — conteúdo original do 5.9 (consulta local, não sincronizada).';$('resources').scrollIntoView({behavior:'smooth',block:'start'})}catch(e){$('toolstatus').textContent='Não foi possível abrir este recurso: '+e.message}}
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>showTool(b.dataset.tool)));
 $('frame').addEventListener('load',()=>{try{if(typeof $('frame').contentWindow.view==='function'){$('frame').contentWindow.view('library');$('toolstatus').textContent='Biblioteca das 100 atividades pronta para consulta.'}}catch(e){}});
 $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('library'),50)});
@@ -247,131 +151,9 @@ $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('librar
 $('refresh').onclick=refreshData;
 function msg(t,error=false){$('status').textContent=t;$('status').className=error?'err':''}
 async function display(session){if(session){$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src')}}
+$('connect').onclick=async()=>{try{let u=$('url').value.trim(),k=$('key').value.trim();if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(u))throw Error('Informe o Project URL HTTPS do Supabase.');if(!k||k.startsWith('sb_secret_'))throw Error('Use apenas a publishable/anon key, nunca secret/service_role.');client=createClient(u,k,{auth:{persistSession:false,autoRefreshToken:true,detectSessionInUrl:false}});const {error}=await client.auth.getSession();if(error)throw error;$('credentials').hidden=false;msg('Conexão inicializada. Entre com sua conta já confirmada.')}catch(e){msg(e.message,true)}};
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
 $('reset').onclick=()=>msg('Recuperação de senha ainda não está concluída nesta versão. Utilize a conta de teste existente.',true);
 $('logout').onclick=async()=>{if(client)await client.auth.signOut();await display(null);msg('Sessão encerrada.');};
-
-// Configuração pública do projeto. Nunca inclua chaves secretas ou senhas aqui.
-const PUBLIC_SUPABASE_URL='https://pmndyeccfbnjikivfapj.supabase.co';
-const PUBLIC_SUPABASE_KEY='sb_publishable_48CcbW0k2JLgL8HnplJiaA_GW3Q43b-';
-(async function initSupabase(){
- try {
-   client=createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
-   const {data:{session},error}=await client.auth.getSession();
-   if(error)throw error;
-   if(session)await display(session);
- } catch(e) {msg('Não foi possível conectar ao Supabase: '+e.message,true);}
-})();
-// UI 6.9.3: organiza componentes existentes sem mudar as funções de salvamento.
-const workPanels=$('workpanels');
-const moduleSections={};
-const legacySection=$('resources');
-const allAppSections=Array.from($('app').querySelectorAll('section'));
-function findSection(title){return allAppSections.find(el=>el.querySelector(':scope > h3')?.textContent.includes(title));}
-const patientSection=findSection('Pacientes fictícios');
-const recordSection=findSection('Registro clínico fictício');
-const evalSection=findSection('Avaliação infantil estruturada');
-const wizardSection=$('wizard');
-const clinicalSection=$('clinical');
-const infoBar=Array.from($('app').children).find(el=>el.classList?.contains('note'));
-if(infoBar)infoBar.hidden=true;
-const oldHeader=Array.from($('app').children).find(el=>el.querySelector?.('#who'));
-if(oldHeader){oldHeader.style.cssText='padding:8px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px';$('app').insertBefore(oldHeader,$('dashboard'));}
-function panel(id){const e=document.createElement('div');e.id='page-'+id;e.className='workpanel';e.hidden=true;workPanels.append(e);moduleSections[id]=e;return e;}
-const patientsPanel=panel('patients');if(patientSection)patientsPanel.append(patientSection);
-const evaluationPanel=panel('evaluation');evaluationPanel.append(wizardSection);
-const sensoryPanel=panel('sensory');
-const feedingPanel=panel('feeding');
-const libraryPanel=panel('library');libraryPanel.append(legacySection);
-const planningPanel=panel('planning');
-const progressPanel=panel('progress');
-const reportsPanel=panel('reports');
-const creatorPanel=panel('creator');
-// Move the existing clinical form, not a copy: all Supabase event handlers continue to reference the same IDs.
-const clinicalTitle=clinicalSection.querySelector('h3');
-const selectorHelp=document.createElement('p');selectorHelp.className='note';selectorHelp.textContent='Selecione o módulo clínico desejado. Os novos registros são salvos no Supabase; use apenas dados fictícios.';
-clinicalSection.insertBefore(selectorHelp,clinicalTitle.nextSibling);
-planningPanel.append(clinicalSection);
-// Additional panels borrow the same clinical form through navigation; no duplicate form is created.
-const moduleAliases={planning:'plano_terapeutico',progress:'evolucao',reports:null};
-const archived=document.createElement('details');archived.style.marginTop='22px';archived.innerHTML='<summary style="cursor:pointer;font-weight:650">Consultar avaliações e registros simplificados anteriores</summary>';
-if(evalSection)archived.append(evalSection);if(recordSection)archived.append(recordSection);evaluationPanel.append(archived);
-const creator=document.createElement('article');creator.className='creator-profile';creator.innerHTML=`<div class="creator-photo" aria-label="Espaço reservado para fotografia profissional">📷<br><small>Foto profissional em breve</small></div><h3>Guilherme Augusto Buss Tupich</h3><div class="role">Terapeuta Ocupacional · Mestre em Ciências da Saúde · Psicoterapeuta Corporal</div><p>O TO Kids PRO nasceu da experiência clínica e do desejo de tornar a prática da Terapia Ocupacional Pediátrica mais organizada, acessível e criativa.</p><p>Idealizado por <strong>Guilherme Augusto Buss Tupich</strong>, terapeuta ocupacional formado pela Universidade Federal do Paraná (UFPR), com especialização em Terapia Ocupacional em Neurologia, mestrado em Ciências da Saúde e formação em Psicologia Corporal, o aplicativo reúne ferramentas para apoiar a avaliação, o planejamento e o acompanhamento terapêutico infantil.</p><p>Sua trajetória profissional contempla a atuação clínica, a docência no ensino superior e o trabalho com desenvolvimento humano.</p><p>O TO Kids PRO representa a união entre conhecimento científico, experiência profissional e tecnologia, com o propósito de oferecer recursos que auxiliem terapeutas ocupacionais na organização de sua prática clínica.</p><p><strong>TO Kids PRO — Tecnologia a serviço do desenvolvimento infantil.</strong></p><p><small>Idealização e desenvolvimento do projeto: Guilherme Augusto Buss Tupich.</small></p><p><a href="mailto:tupich1983@gmail.com" class="contact-link">✉ Enviar e-mail ao criador</a></p><p>Contato: <a href="mailto:tupich1983@gmail.com">tupich1983@gmail.com</a></p><hr><p><small>© 2026 TO Kids PRO. Aplicativo em desenvolvimento, exclusivo para testes com dados fictícios.</small></p>`;creatorPanel.append(creator);
-// Módulo contextual 6.9.3: atividade e comparação referencial, sempre com paciente ativo.
-const developmentalRefs=[
- {age:6,items:[['motor','Rola de barriga para cima e apoia-se nos braços quando de bruços'],['manual','Alcança e explora brinquedos com as mãos'],['social','Ri e interage em brincadeiras com o cuidador']]},
- {age:12,items:[['motor','Puxa-se para ficar de pé e desloca-se apoiando-se em móveis'],['manual','Pega objetos pequenos usando polegar e indicador'],['cognitivo','Coloca objetos em recipientes e procura objetos escondidos']]},
- {age:18,items:[['motor','Caminha sem se apoiar'],['manual','Rabisca e tenta usar colher'],['cognitivo','Imita ações simples e brinca com objetos de forma funcional']]},
- {age:24,items:[['motor','Corre e chuta uma bola'],['manual','Manipula botões e objetos de brinquedos; usa colher'],['linguagem','Combina pelo menos duas palavras'],['cognitivo','Brinca com mais de um brinquedo em sequência simples']]},
- {age:36,items:[['motor','Enfia contas grandes e usa garfo com apoio quando necessário'],['linguagem','Mantém trocas simples de conversa'],['cognitivo','Desenha círculo após demonstração e participa de brincadeiras com outras crianças']]},
- {age:48,items:[['motor','Segura lápis entre dedos e polegar; serve-se com supervisão'],['cognitivo','Identifica cores e antecipa partes de histórias conhecidas'],['social','Participa de brincadeiras de faz de conta e adapta comportamento ao contexto']]},
- {age:60,items:[['motor','Pula em um pé e abotoa alguns botões'],['cognitivo','Conta até dez e presta atenção por alguns minutos em atividades'],['social','Segue regras e participa de jogos em turnos']]}
-];
-const integratedActivities=[
- {name:'Exploração tátil com escolha',area:'sensorial',min:6,max:144,dx:['autis','down','atraso','intelectual'],goal:'Exploração e tolerância sensorial com autonomia',method:'Oferecer duas ou três texturas seguras, permitir aproximação voluntária e observar sinais de conforto.',adapt:'Não forçar contato; respeitar recusa e sinais de sobrecarga.',evidence:'Atividade funcional de exploração; não equivale a protocolo de Integração Sensorial de Ayres.'},
- {name:'Brincadeira de turnos com interesses da criança',area:'cognitivo',min:12,max:144,dx:['autis','tdah','intelectual','down'],goal:'Atenção compartilhada e participação social',method:'Alternar ações curtas com brinquedo preferido, usar gestos e comunicação alternativa se necessário.',adapt:'Ajustar duração, previsibilidade e suporte comunicativo.',evidence:'Prática centrada em participação; individualizar objetivos.'},
- {name:'Alcance funcional em posicionamento estável',area:'motor',min:3,max:144,dx:['paralisia','neuromuscular','espinha','encefálica'],goal:'Controle postural e alcance com propósito',method:'Posicionar brinquedo acessível e incentivar alcance ativo dentro da amplitude confortável.',adapt:'Ajustar cadeira, apoio proximal, amplitude e fadiga; considerar orientação da equipe.',evidence:'Prática orientada a tarefas funcionais; evitar manobras não avaliadas.'},
- {name:'Encaixes graduados e construção',area:'motor',min:12,max:120,dx:['down','atraso','coordenação','intelectual','paralisia'],goal:'Coordenação visomotora e manipulação',method:'Começar por encaixes grandes e progredir tamanho, precisão e sequência conforme desempenho.',adapt:'Usar peças ampliadas, estabilização da base e apoio bilateral.',evidence:'Treino orientado à tarefa e participação.'},
- {name:'Sequência visual de autocuidado',area:'cognitivo',min:24,max:144,dx:['autis','tdah','intelectual','atraso','down'],goal:'Planejamento, iniciação e autonomia em AVD',method:'Dividir uma rotina escolhida em passos ilustrados; praticar no ambiente habitual.',adapt:'Reduzir etapas, usar pistas e retirar ajuda gradualmente.',evidence:'Estratégias de organização funcional e aprendizagem contextual.'},
- {name:'Circuito motor acessível',area:'motor',min:18,max:144,dx:['atraso','coordenação','tdah','down','paralisia'],goal:'Planejamento motor e mobilidade funcional',method:'Organizar dois ou três desafios motores com metas lúdicas escolhidas pela criança.',adapt:'Substituir saltos por deslocamentos ou alcances acessíveis; respeitar fadiga.',evidence:'Prática motora graduada, adaptada à segurança.'},
- {name:'Organização cognitiva com jogo de regras',area:'cognitivo',min:48,max:144,dx:['tdah','intelectual','autis','encefálica'],goal:'Memória de trabalho, inibição e flexibilidade',method:'Usar jogo breve de turnos com regra simples, aumentando uma variável por vez.',adapt:'Apoio visual, pausas e instruções curtas.',evidence:'Generalização para rotinas precisa ser avaliada; não prometer melhora global.'},
- {name:'Exploração alimentar sem coerção',area:'alimentar',min:6,max:144,dx:['autis','down','atraso','paralisia'],goal:'Participação e conforto durante refeições',method:'Permitir observar, tocar e explorar alimentos apropriados à idade sem obrigação de provar.',adapt:'Considerar alergias, disfagia, postura, textura segura e equipe interdisciplinar.',evidence:'Estratégia de participação; não substitui avaliação de deglutição.'},
- {name:'Brincar de causa e efeito',area:'cognitivo',min:3,max:36,dx:['atraso','down','paralisia','autis'],goal:'Exploração, antecipação e iniciativa',method:'Usar brinquedos com resposta clara ao toque ou movimento; alternar iniciativa e espera.',adapt:'Adaptar acionadores, tamanho e posicionamento.',evidence:'Atividade desenvolvimental lúdica, individualizada.'},
- {name:'Rotina sensório-motora autorregulada',area:'sensorial',min:24,max:144,dx:['autis','tdah','atraso'],goal:'Participação e autorregulação nas rotinas',method:'Identificar preferências e testar pausas de movimento escolhidas pela criança; observar resposta funcional.',adapt:'Evitar estímulos vestibulares intensos sem avaliação específica.',evidence:'Estimulação sensorial genérica não é o mesmo que Integração Sensorial de Ayres.'},
- {name:'Vestir com prática orientada à tarefa',area:'avd',min:24,max:144,dx:['paralisia','down','coordenação','intelectual','autis'],goal:'Participação em vestuário',method:'Escolher uma etapa funcional, praticar com roupas reais e reforçar autonomia possível.',adapt:'Velcro, alças, roupas adaptadas e posicionamento confortável.',evidence:'Prática funcional centrada em metas da criança e família.'},
- {name:'Organização de material escolar',area:'cognitivo',min:60,max:144,dx:['tdah','autis','coordenação','intelectual'],goal:'Funções executivas e participação escolar',method:'Criar checklist visual e praticar arrumação de mochila em contexto real.',adapt:'Reduzir itens e graduar pistas; envolver escola e família.',evidence:'Treino contextual e monitoramento de resultados.'}
-];
-const careBox=document.createElement('section');careBox.id='integratedcare';careBox.innerHTML='<h3>Plano contextual do paciente ativo — 6.9.3</h3><p class="note">Ferramenta educativa de teste, somente com dados fictícios. Diagnóstico e nível de suporte não determinam habilidades nem prescrevem intervenções. Avalie preferências, funcionalidade, segurança e objetivos da criança.</p><div id="carepatient"></div><label>Área de interesse</label><select id="carearea"><option value="all">Todas as áreas</option><option value="sensorial">Estimulação e processamento sensorial</option><option value="motor">Motricidade e controle postural</option><option value="cognitivo">Cognição, brincar e comunicação</option><option value="alimentar">Alimentação</option><option value="avd">Atividades de vida diária</option></select><h4>Sugestões de atividades adaptáveis</h4><div id="careactivities"></div><h4>Comparativo de marcos do desenvolvimento</h4><p>Referências populacionais aproximadas (CDC, marcos de desenvolvimento). São indicadores de observação, não teste diagnóstico, escore de atraso ou comparação de valor entre crianças. Para idade acima de 5 anos, utilize instrumentos apropriados.</p><div id="caremilestones"></div><label>Observações clínicas fictícias / contexto funcional</label><textarea id="carenotes" rows="3" placeholder="Descreva como a criança participa, adaptações e observações — apenas dados fictícios"></textarea><button id="caresave" type="button">Salvar comparação fictícia no Supabase</button><p id="carefeedback" role="status"></p><p><small>Referências para consulta: <a href="https://www.cdc.gov/act-early/milestones/index.html" target="_blank" rel="noopener noreferrer">CDC — Marcos do desenvolvimento</a> · <a href="https://www.aota.org/practice/clinical-topics/sensory-integration" target="_blank" rel="noopener noreferrer">AOTA — Integração sensorial</a>. Verificar evidências específicas antes de aplicar protocolos. Integração Sensorial de Ayres requer capacitação e fidelidade ao modelo.</small></p>';
-const careStyles=document.createElement('style');careStyles.textContent='#integratedcare{border:1px solid #d1e3dd;margin-bottom:14px}#careactivities{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}#careactivities article{border:1px solid #c9ddd6;border-radius:10px;padding:12px;background:#f7fbf9}#careactivities h5{font-size:15px;margin:0 0 6px}#careactivities p{font-size:13px;line-height:1.45}#caremilestones .milestone{padding:12px;margin:10px 0;border:1px solid #d5e3df;border-radius:9px}#caremilestones select{max-width:310px}';document.head.append(careStyles);
-let careStatus={};
-function renderIntegratedCare(){
- const p=patientRows.find(x=>x.id===selectedPatientId),header=$('carepatient'),activities=$('careactivities'),milestones=$('caremilestones');if(!header)return;
- activities.replaceChildren();milestones.replaceChildren();careStatus={};
- if(!p){header.textContent='Abra um paciente fictício na Central Clínica.';return}
- const age=monthsOld(p),dx=String(p.dados?.diagnostico||'').toLowerCase();header.textContent='Paciente: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Sem diagnóstico')+(p.dados?.nivel_suporte_tea?' • TEA nível '+p.dados.nivel_suporte_tea:'');
- const area=$('carearea').value;
- const available=integratedActivities.filter(a=>(age===null||(age>=a.min&&age<=a.max))&&(area==='all'||a.area===area)).map(a=>({...a,priority:a.dx.some(d=>dx.includes(d))?1:0})).sort((a,b)=>b.priority-a.priority);
- if(!available.length)activities.textContent='Não há atividades nessa combinação de idade e área. Consulte o catálogo geral.';
- for(const a of available){const card=document.createElement('article');const h=document.createElement('h5');h.textContent=(a.priority?'★ Sugestão relacionada ao perfil: ':'')+a.name;card.append(h);for(const [k,v] of [['Objetivo',a.goal],['Como realizar',a.method],['Adaptações e segurança',a.adapt],['Limite da evidência',a.evidence]]){const par=document.createElement('p');const strong=document.createElement('strong');strong.textContent=k+': ';par.append(strong,document.createTextNode(v));card.append(par)}activities.append(card)}
- if(age===null){milestones.textContent='Informe a data de nascimento fictícia para comparar marcos.';return}
- if(age>60){milestones.textContent='O comparativo de marcos CDC desta versão cobre até 60 meses. Para idades superiores, usar avaliação funcional e instrumentos apropriados.';return}
- const band=developmentalRefs.find(x=>age<=x.age)||developmentalRefs[developmentalRefs.length-1];const title=document.createElement('p');title.textContent='Referência mais próxima: até '+band.age+' meses (idade cadastrada: '+age+' meses).';milestones.append(title);
- band.items.forEach(([domain,description],i)=>{const div=document.createElement('div');div.className='milestone';const label=document.createElement('label');label.textContent=description+' ('+domain+')';const select=document.createElement('select');select.dataset.key=String(i);for(const [v,t] of [['nao_avaliado','Não avaliado'],['observado','Observado'],['em_aquisicao','Em aquisição / com apoio'],['nao_observado','Ainda não observado'],['nao_aplicavel','Não aplicável']]){const op=document.createElement('option');op.value=v;op.textContent=t;select.append(op)}select.onchange=()=>careStatus[i]=select.value;div.append(label,select);milestones.append(div)});
-}
-$('carearea').addEventListener('change',renderIntegratedCare);
-$('caresave').addEventListener('click',async()=>{
- const p=patientRows.find(x=>x.id===selectedPatientId);if(!p||!client){$('carefeedback').textContent='Selecione um paciente e faça login.';return}
- const age=monthsOld(p),band=developmentalRefs.find(x=>age!==null&&age<=x.age);
- const comparisons=(band?.items||[]).map(([area,marco],i)=>({area,marco,status:careStatus[i]||'nao_avaliado'}));
- const conteudo={formato:'tokids_comparativo_v1',versao:'6.9.3',idade_meses:age,referencia_meses:band?.age||null,comparacoes:comparisons,observacoes:$('carenotes').value.trim(),aviso:'Referência populacional; não é diagnóstico ou escore padronizado.'};
- const {error}=await client.from('registros_clinicos').insert({paciente_id:p.id,tipo:'avaliacao',titulo:'Comparativo de desenvolvimento — teste',conteudo});
- $('carefeedback').textContent=error?'Não foi possível salvar: '+error.message:'Comparativo fictício salvo no prontuário Supabase.';
- if(!error)await refreshData();
-});
-
-for(const key of ['sensory','feeding','library']){const dest=moduleSections[key];const shortcut=document.createElement('button');shortcut.type='button';shortcut.className='secondary';shortcut.textContent='Ver plano individual e comparativo do paciente';shortcut.onclick=()=>{if(careBox.parentElement!==dest)dest.insertBefore(careBox,dest.firstChild);renderIntegratedCare();careBox.scrollIntoView({behavior:'smooth',block:'start'})};dest.insertBefore(shortcut,dest.firstChild)}
-moduleSections.library.insertBefore(careBox,moduleSections.library.firstChild);
-const resourcesHelp=document.createElement('p');resourcesHelp.id='legacy-info';resourcesHelp.textContent='As atividades e fichas do catálogo original são recursos de consulta local; ainda não sincronizam com o prontuário no Supabase.';legacySection.insertBefore(resourcesHelp,$('frame'));
-const titles={patients:'Pacientes',evaluation:'Avaliação pediátrica completa',sensory:'Desenvolvimento sensoriomotor',feeding:'Seletividade alimentar',library:'Biblioteca de atividades',planning:'Planejar sessões',progress:'Evoluções clínicas',reports:'Relatórios',creator:'Sobre o criador'};
-let currentPage='patients';
-function moveLegacy(dest,tool){if(legacySection.parentElement!==dest)dest.append(legacySection);setTimeout(()=>showTool(tool),100)}
-function moveClinical(dest,preferred){if(clinicalSection.parentElement!==dest)dest.append(clinicalSection);
- if(preferred){const sel=$('moduletype');const opts=Array.from(sel.options);const target=opts.find(o=>o.value===preferred)||opts.find(o=>o.textContent.toLowerCase().includes(preferred));if(target){sel.value=target.value;sel.dispatchEvent(new Event('change'))}}
-}
-function openPage(id){if(!moduleSections[id])return;currentPage=id;
- activePatientNotice();
- if(['sensory','feeding','library'].includes(id)){if(careBox.parentElement!==moduleSections[id])moduleSections[id].insertBefore(careBox,moduleSections[id].firstChild);renderIntegratedCare()}
- if(['sensory','feeding','library'].includes(id))moveLegacy(moduleSections[id],id==='sensory'?'sensory':id==='feeding'?'foodactivities':'library');
- if(['planning','progress','reports'].includes(id))moveClinical(moduleSections[id],id==='progress'?'evolucao':id==='planning'?'plano_terapeutico':null);
- for(const [key,el] of Object.entries(moduleSections))el.hidden=key!==id;
- $('worktitle').textContent=titles[id];document.querySelectorAll('.dashboard-tile').forEach(b=>{b.classList.toggle('active',b.dataset.page===id);b.setAttribute('aria-pressed',String(b.dataset.page===id))});
- if(id==='reports'){$('printreport').scrollIntoView({block:'nearest'});}
- $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
-}
-document.querySelectorAll('.dashboard-tile').forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.page)));
-$('homebutton').onclick=()=>{$('dashboard').scrollIntoView({behavior:'smooth',block:'start'})};
-openPage('patients');
-// The embedded local library is kept functional but its second app header/menu is hidden.
-$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.3');d.title='TO Kids PRO 6.9.3 — Recursos terapêuticos';}catch(e){}});
 </script></body></html>

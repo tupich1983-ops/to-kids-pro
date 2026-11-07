@@ -1,7 +1,2 @@
-TO Kids PRO 6.9.3 — TESTE COM DADOS FICTÍCIOS
-
-Paciente ativo compartilhado entre Central Clínica, biblioteca e módulo contextual. Diagnósticos e TEA níveis 1-3; atividades educativas adaptáveis; comparação de marcos CDC até 60 meses; salvamento fictício no Supabase.
-
-ATENÇÃO: recursos legados 5.9 continuam locais e NÃO sincronizam com o Supabase. O módulo contextual novo é integrado ao prontuário de teste. Não utilizar dados reais ou comercializar antes de auditoria de segurança, revisão clínica e LGPD.
-
-Instalação: descompactar e enviar CONTEÚDO da pasta para a RAIZ do repositório GitHub Pages, substituindo os arquivos existentes.
+TO Kids PRO 6.7 - REORGANIZACAO VISUAL DE TESTE
+Recursos e biblioteca movidos para o topo do aplicativo apos login. Botoes destacados. Titulo do painel legado atualizado. Nenhuma alteracao no banco ou nos formularios. O painel legado segue local, sem sincronizacao com Supabase e acessivel por URL direta. SOMENTE DADOS FICTICIOS.
