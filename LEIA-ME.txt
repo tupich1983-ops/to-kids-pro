@@ -1,3 +1,2 @@
-TO Kids PRO 6.6 — Navegação unificada de recursos
-
-A versão 6.6 preserva os formulários 6.5 e torna biblioteca 100 atividades, sensoriomotor, atividades alimentares e outros recursos 5.9 acessíveis no mesmo aplicativo com atalhos. Recursos 5.9 continuam locais e NÃO sincronizam ao Supabase; sem prontuário unificado. A página painel.html continua acessível por URL direta sem autenticação. Somente dados fictícios. Substituir arquivos no GitHub Pages, sem mexer no Supabase.
+TO Kids PRO 6.7 - REORGANIZACAO VISUAL DE TESTE
+Recursos e biblioteca movidos para o topo do aplicativo apos login. Botoes destacados. Titulo do painel legado atualizado. Nenhuma alteracao no banco ou nos formularios. O painel legado segue local, sem sincronizacao com Supabase e acessivel por URL direta. SOMENTE DADOS FICTICIOS.
