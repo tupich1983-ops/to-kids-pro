@@ -1,1 +1,3 @@
-TO Kids PRO 6.5 — CORREÇÃO DE TESTE. Inclui avaliação pediátrica de 9 etapas, navegação, rascunho local por paciente fictício, salvamento final no Supabase e consulta de avaliações completas. Mantém módulos anteriores e biblioteca legada. A avaliação antiga do painel 5.9 continua independente, sem integração. Somente dados fictícios. Publicar arquivos na raiz do GitHub Pages. Não contém dados reais.
+TO Kids PRO 6.6 — Navegação unificada de recursos
+
+A versão 6.6 preserva os formulários 6.5 e torna biblioteca 100 atividades, sensoriomotor, atividades alimentares e outros recursos 5.9 acessíveis no mesmo aplicativo com atalhos. Recursos 5.9 continuam locais e NÃO sincronizam ao Supabase; sem prontuário unificado. A página painel.html continua acessível por URL direta sem autenticação. Somente dados fictícios. Substituir arquivos no GitHub Pages, sem mexer no Supabase.
