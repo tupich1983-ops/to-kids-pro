@@ -29,7 +29,8 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 #ptoi-root .ptoi-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 #ptoi-root .ptoi-note{font-size:13px;color:#496b63}#ptoi-root .ptoi-goal-title{font-weight:700}
 @media(max-width:650px){#ptoi-root .ptoi-grid{grid-template-columns:1fr}}
-</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status"></p></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
+#password-recovery-panel{border:1px solid #b7d9d0;border-radius:12px;padding:16px;margin-top:16px;background:#f8fcfa}#password-recovery-panel[hidden]{display:none!important}#password-recovery-panel label{display:block;margin-top:10px}#password-recovery-panel input{width:100%}#password-recovery-panel button{margin-top:12px}
+</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
 <div class="dashboard-grid" id="dashboard" aria-label="Módulos principais">
 <button class="dashboard-tile" type="button" data-page="patients"><span class="tile-icon">👶</span>Pacientes</button>
 <button class="dashboard-tile" type="button" data-page="evaluation"><span class="tile-icon">📋</span>Avaliação completa</button>
@@ -312,7 +313,41 @@ function msg(t,error=false){$('status').textContent=t;$('status').className=erro
 async function display(session){if(session){$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src')}}
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
-$('reset').onclick=()=>msg('Recuperação de senha ainda não está concluída nesta versão. Utilize a conta de teste existente.',true);
+// Fluxo oficial Supabase Auth: solicita link, valida a sessão de recuperação e troca a senha.
+let recoveryMode = false;
+const recoveryFromUrl = new URLSearchParams(location.hash.replace(/^#/, '')).get('type') === 'recovery' || new URLSearchParams(location.search).get('type') === 'recovery';
+function recoveryMessage(t,error=false){$('recovery-status').textContent=t;$('recovery-status').className=error?'err':'';}
+function enterRecoveryMode(){recoveryMode=true;$('gate').hidden=false;$('app').hidden=true;$('credentials').hidden=true;$('password-recovery-panel').hidden=false;msg('Link de recuperação reconhecido. Cadastre uma nova senha.');}
+function leaveRecoveryMode(){recoveryMode=false;$('credentials').hidden=false;$('password-recovery-panel').hidden=true;$('new-password').value='';$('confirm-new-password').value='';recoveryMessage('');}
+$('reset').onclick=async()=>{
+ if(!client)return msg('Conexão com Supabase indisponível.',true);
+ const email=$('email').value.trim();if(!email)return msg('Informe seu e-mail para solicitar a recuperação.',true);
+ $('reset').disabled=true;
+ try{
+  const redirectTo=location.origin+location.pathname;
+  const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo});
+  if(error)throw error;
+  msg('Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha. Confira também o spam.');
+ }catch(e){msg('Não foi possível solicitar a recuperação: '+e.message,true)}
+ finally{$('reset').disabled=false}
+};
+$('save-new-password').onclick=async()=>{
+ if(!client||!recoveryMode)return recoveryMessage('Abra o link de recuperação recebido por e-mail.',true);
+ const pass=$('new-password').value,confirm=$('confirm-new-password').value;
+ if(pass.length<12)return recoveryMessage('Use uma senha com pelo menos 12 caracteres.',true);
+ if(pass!==confirm)return recoveryMessage('As senhas não coincidem.',true);
+ $('save-new-password').disabled=true;
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session)throw new Error('Link inválido ou expirado. Solicite um novo e-mail de recuperação.');
+  const {error}=await client.auth.updateUser({password:pass});if(error)throw error;
+  await client.auth.signOut();leaveRecoveryMode();
+  history.replaceState(null,'',location.pathname);
+  msg('Senha atualizada com sucesso. Entre novamente com seu e-mail e sua nova senha.');
+ }catch(e){recoveryMessage('Não foi possível atualizar a senha: '+e.message,true)}
+ finally{$('save-new-password').disabled=false}
+};
+$('cancel-password-recovery').onclick=async()=>{if(client)await client.auth.signOut();leaveRecoveryMode();history.replaceState(null,'',location.pathname);msg('Volte ao login ou solicite outro link de recuperação.');};
 $('logout').onclick=async()=>{if(client)await client.auth.signOut();await display(null);msg('Sessão encerrada.');};
 
 // Configuração pública do projeto. Nunca inclua chaves secretas ou senhas aqui.
@@ -320,10 +355,16 @@ const PUBLIC_SUPABASE_URL='https://pmndyeccfbnjikivfapj.supabase.co';
 const PUBLIC_SUPABASE_KEY='sb_publishable_48CcbW0k2JLgL8HnplJiaA_GW3Q43b-';
 (async function initSupabase(){
  try {
-   client=createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+   client=createClient(PUBLIC_SUPABASE_URL,PUBLIC_SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+   client.auth.onAuthStateChange((event,session)=>{
+     if(event==='PASSWORD_RECOVERY')enterRecoveryMode();
+     // Não abrir o prontuário automaticamente durante a redefinição de senha.
+     if(event==='SIGNED_IN' && !recoveryMode && !recoveryFromUrl && session)void display(session);
+   });
    const {data:{session},error}=await client.auth.getSession();
    if(error)throw error;
-   if(session)await display(session);
+   if(recoveryFromUrl){if(session)enterRecoveryMode();else msg('Validando o link de recuperação. Se ele expirou, solicite outro.',true);}
+   else if(session && !recoveryMode)await display(session);
  } catch(e) {msg('Não foi possível conectar ao Supabase: '+e.message,true);}
 })();
 // UI 6.9.1: organiza componentes existentes sem mudar as funções de salvamento.
