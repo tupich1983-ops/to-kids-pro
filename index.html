@@ -623,4 +623,81 @@ $('homebutton').onclick=()=>{$('dashboard').scrollIntoView({behavior:'smooth',bl
 openPage('patients');
 // The embedded local library is kept functional but its second app header/menu is hidden.
 $('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','6.9.1');d.title='TO Kids PRO — Recursos terapêuticos';installLegacyContextObserver();}catch(e){}});
+
+// Integração PTOI x Evoluções 1.1 — registros vinculados por meta_id.
+// Uso restrito a pacientes fictícios até revisão de segurança e RLS.
+const evoRoot=document.createElement('section');evoRoot.id='ptoi-evolution';
+evoRoot.style.cssText='padding:20px;margin:0 0 20px;border:1px solid #c8e1dc;border-radius:14px;background:#f6fbf9';
+evoRoot.innerHTML=`<h3>Evolução clínica vinculada ao PTOI</h3><p class="note">Registre o desempenho da sessão em relação a uma meta já cadastrada. Exclusivo para pacientes fictícios.</p>
+<label for="evo-patient">Paciente fictício</label><select id="evo-patient"></select>
+<label for="evo-goal">Meta terapêutica do PTOI</label><select id="evo-goal"></select>
+<label for="evo-date">Data da sessão</label><input type="date" id="evo-date">
+<label for="evo-activities">Atividades e estratégias utilizadas</label><textarea id="evo-activities" rows="2" placeholder="Atividades, adaptações e pistas oferecidas"></textarea>
+<label for="evo-performance">Desempenho mensurável / nível de ajuda</label><textarea id="evo-performance" rows="2" placeholder="Ex.: realizou 3/5 tentativas com pista verbal"></textarea>
+<label for="evo-response">Participação, resposta e barreiras observadas</label><textarea id="evo-response" rows="2"></textarea>
+<label for="evo-status">Situação da meta nesta sessão</label><select id="evo-status"><option>Em andamento</option><option>Parcialmente alcançada</option><option>Alcançada</option><option>Revisar meta</option><option>Não iniciada</option></select>
+<label for="evo-next">Conduta e próximos passos</label><textarea id="evo-next" rows="2"></textarea>
+<button type="button" id="evo-save">Salvar evolução vinculada no Supabase</button><p id="evo-message" role="status" class="note"></p>
+<h4>Histórico de evoluções vinculadas</h4><div id="evo-history"></div>`;
+progressPanel.insertBefore(evoRoot,progressPanel.firstChild);
+const evo$=id=>document.getElementById(id);
+evo$('evo-date').value=new Date().toLocaleDateString('en-CA');
+function evoSync(){
+ const sel=evo$('evo-patient'),old=sel.value;sel.replaceChildren();
+ for(const p of patientRows){const op=document.createElement('option');op.value=p.id;op.textContent=p.nome;sel.append(op)}
+ if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;
+ else if(patientRows.some(p=>p.id===old))sel.value=old;
+ evoGoals();
+}
+function evoGoals(){
+ const pid=evo$('evo-patient').value,sel=evo$('evo-goal'),old=sel.value;sel.replaceChildren();
+ const goals=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1');
+ for(const r of goals){const op=document.createElement('option');op.value=r.conteudo.meta_id;op.textContent=(r.conteudo.prazo||'')+' · '+r.conteudo.meta;sel.append(op)}
+ if(goals.some(r=>r.conteudo.meta_id===old))sel.value=old;
+ if(!goals.length){const op=document.createElement('option');op.value='';op.textContent='Cadastre uma meta no PTOI primeiro';sel.append(op)}
+ evoHistory();
+}
+function evoHistory(){
+ const pid=evo$('evo-patient').value,box=evo$('evo-history');box.replaceChildren();
+ const entries=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_evolucao_ptoi_v1');
+ if(!entries.length){box.textContent='Nenhuma evolução vinculada registrada.';return}
+ for(const r of entries){const c=r.conteudo,goal=allRecords.find(x=>x.paciente_id===pid&&x.conteudo?.formato==='tokids_ptoi_meta_v1'&&x.conteudo.meta_id===c.meta_id);
+ const article=document.createElement('article');article.className='history';const title=document.createElement('strong');title.textContent=(c.data||'')+' · '+(goal?.conteudo?.meta||'Meta não encontrada');article.append(title);
+ for(const [label,val] of [['Atividades',c.atividades],['Desempenho',c.medida],['Resposta',c.resposta],['Situação',c.estado],['Próximos passos',c.proximos]]){const line=document.createElement('p'),b=document.createElement('strong');b.textContent=label+': ';line.append(b,document.createTextNode(String(val||'Não informado')));article.append(line)}box.append(article)}
+}
+evo$('evo-patient').onchange=evoGoals;
+evo$('evo-save').onclick=async()=>{
+ const pid=evo$('evo-patient').value,metaId=evo$('evo-goal').value,measure=evo$('evo-performance').value.trim();
+ const message=evo$('evo-message');if(!client||!pid||!metaId){message.textContent='Selecione paciente fictício e uma meta cadastrada.';return}
+ if(!evo$('evo-date').value||!measure){message.textContent='Informe data e desempenho mensurável.';return}
+ const goal=allRecords.find(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1'&&r.conteudo.meta_id===metaId);
+ if(!goal){message.textContent='Meta não encontrada. Atualize os dados e tente novamente.';return}
+ const btn=evo$('evo-save');btn.disabled=true;
+ try{
+  const conteudo={formato:'tokids_evolucao_ptoi_v1',versao:1,meta_id:metaId,data:evo$('evo-date').value,atividades:evo$('evo-activities').value.trim(),medida:measure,resposta:evo$('evo-response').value.trim(),estado:evo$('evo-status').value,proximos:evo$('evo-next').value.trim()};
+  const {error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Evolução vinculada ao PTOI',conteudo});if(error)throw error;
+  for(const id of ['evo-activities','evo-performance','evo-response','evo-next'])evo$(id).value='';
+  await refreshData();message.textContent='Evolução vinculada salva no Supabase.';
+ }catch(e){message.textContent='Falha ao salvar evolução: '+e.message}finally{btn.disabled=false}
+};
+// Atualiza as opções após carregar dados e quando o paciente ativo mudar.
+const evoPreviousRefresh=refreshData;
+refreshData=async function(...args){const out=await evoPreviousRefresh(...args);evoSync();return out};
+const evoPreviousSetPatient=setSelectedPatient;
+setSelectedPatient=function(...args){const out=evoPreviousSetPatient(...args);if(evo$('evo-patient')&&patientRows.some(p=>p.id===args[0])){evo$('evo-patient').value=args[0];evoGoals()}return out};
+// O histórico do PTOI também reconhece evoluções vinculadas à mesma meta.
+const ptoiOriginalRecords=ptoiRecords;
+ptoiRecords=function(pid){return allRecords.filter(r=>r.paciente_id===pid&&['tokids_ptoi_meta_v1','tokids_ptoi_acompanhamento_v1','tokids_evolucao_ptoi_v1'].includes(r.conteudo?.formato))};
+// Renderização do histórico existente: evolução vinculada aparece como acompanhamento da meta.
+const ptoiOriginalRender=ptoiRender;
+ptoiRender=function(){
+ const pid=ptoi$('ptoi-patient').value;
+ const linked=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_evolucao_ptoi_v1');
+ // Adaptador apenas de visualização, sem escrever registros duplicados no banco.
+ const original=allRecords;
+ try{allRecords=original.concat(linked.map(r=>({...r,conteudo:{...r.conteudo,formato:'tokids_ptoi_acompanhamento_v1',observacao:[r.conteudo.resposta,r.conteudo.proximos].filter(Boolean).join(' · ')}})));ptoiOriginalRender()}
+ finally{allRecords=original}
+};
+evoSync();
+
 </script></body></html>
