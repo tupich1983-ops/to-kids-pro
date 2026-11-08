@@ -433,10 +433,12 @@ function tkActivityIllustration(x){
  '<path d="M40 110 Q90 28 136 99 T228 74" fill="none" stroke="'+palette[1]+'" stroke-width="14" stroke-linecap="round"/><circle cx="62" cy="53" r="19" fill="'+palette[2]+'"/><circle cx="174" cy="127" r="24" fill="'+palette[2]+'"/>'
  ][index];
  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="260" height="158" viewBox="0 0 260 158" role="img"><rect width="260" height="158" rx="16" fill="'+palette[0]+'"/>'+shapes+'<circle cx="224" cy="22" r="9" fill="#fff" opacity=".8"/></svg>';
- const img=document.createElement('img');img.src='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
- img.alt='Ilustração esquemática da atividade: '+x.title+'. Não representa posicionamento clínico.';
- img.loading='lazy';img.style.cssText='width:100%;max-width:260px;height:158px;object-fit:cover;border-radius:12px;display:block;margin:12px 0;';
- return img;
+ const wrapper=document.createElement('div');
+ wrapper.setAttribute('role','img');
+ wrapper.setAttribute('aria-label','Ilustração esquemática da atividade: '+x.title+'. Não representa posicionamento clínico.');
+ wrapper.style.cssText='width:100%;max-width:260px;height:158px;border-radius:12px;overflow:hidden;display:block;margin:12px 0;';
+ wrapper.innerHTML=svg;
+ return wrapper;
 }
 function tkRenderCatalog(){
  const age=$('tk-age').value,area=$('tk-area').value,q=$('tk-search').value.trim().toLocaleLowerCase('pt-BR');
