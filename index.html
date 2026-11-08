@@ -434,6 +434,16 @@ function tkActivityIllustration(x){
  return wrapper;
 }
 
+const tkEvidenceGuides={
+ 'Sensorial':{focus:'Participação voluntária, preferências sensoriais, previsibilidade e ajuste ambiental.',goal:'Identificar estímulos tolerados e estratégias que favoreçam a participação funcional.',measure:'Registrar escolha, aproximação/afastamento, duração de participação e necessidade de pausa.',care:'Não forçar contato, exposição ou movimento; interromper diante de sofrimento, náusea ou insegurança postural.',basis:'EPTO-4: ocupação, contexto e participação; Checklist TO: observação funcional. Proposta original, não protocolo de Integração Sensorial de Ayres®.'},
+ 'Motricidade':{focus:'Controle postural, coordenação bilateral, planejamento da ação e participação na brincadeira.',goal:'Aumentar participação ativa e independência na tarefa lúdica ou cotidiana.',measure:'Registrar número de tentativas, ajuda necessária, precisão e qualidade do movimento.',care:'Respeitar marcos e variações individuais; não impor posições ou resistências incompatíveis com a avaliação.',basis:'EPTO-4: análise do desempenho e contexto; Pedral e Bastos: raciocínio metodológico em TO. Proposta original.'},
+ 'Cognição':{focus:'Atenção, antecipação, resolução de problemas e transferência para situações do cotidiano.',goal:'Apoiar uma estratégia funcional que a criança consiga usar durante uma ocupação significativa.',measure:'Registrar pistas necessárias, sequência concluída e generalização para outra tarefa.',care:'Evitar transformar a atividade em teste de acerto/erro; graduar exigências conforme fadiga e engajamento.',basis:'Noomi Katz: cognição vinculada à ocupação e participação; EPTO-4. Adaptação autoral, não instrumento padronizado.'},
+ 'AVDs':{focus:'Participação real nas rotinas de autocuidado, com apoio do ambiente e do cuidador.',goal:'Aumentar autonomia possível na rotina escolhida pela criança e família.',measure:'Registrar etapas iniciadas, concluídas, tipo de ajuda e barreiras ambientais.',care:'Priorizar segurança, dignidade, consentimento e participação, não apenas velocidade ou independência total.',basis:'EPTO-4: ocupações e desempenho; Berenice Rosa Francisco: sentido da atividade humana; Checklist TO.'}
+};
+function tkEvidenceFor(x){
+ const g=tkEvidenceGuides[x.area]||tkEvidenceGuides['Motricidade'];
+ return [['Foco do raciocínio clínico',g.focus],['Meta funcional sugerida',g.goal],['Como acompanhar a evolução',g.measure],['Cuidados e contraindicações gerais',g.care],['Fundamentação conceitual',g.basis]];
+}
 function tkRenderCatalog(){
  const age=$('tk-age').value,area=$('tk-area').value,q=$('tk-search').value.trim().toLocaleLowerCase('pt-BR');
  const p=patientRows.find(x=>x.id===selectedPatientId);
@@ -448,6 +458,10 @@ function tkRenderCatalog(){
  if(!filtered.length){dest.textContent='Nenhuma atividade encontrada. Altere os filtros.';return;}
  for(const x of filtered){const details=document.createElement('details');details.className='history';const summary=document.createElement('summary');summary.style.cssText='cursor:pointer;font-weight:700;color:#164b4c';summary.textContent=x.title+' • '+tkAgeNames[x.age]+' • '+x.area;details.append(summary);details.append(tkActivityIllustration(x));
  for(const [label,value] of [['Objetivo clínico',x.area],['Materiais',x.materials],['Como aplicar',x.steps],['Adaptações',x.adapt],['O que observar',x.observe]]){const para=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));details.append(para)}
+ const reasoning=document.createElement('details');reasoning.style.cssText='margin:12px 0;padding:12px;border-radius:10px;background:#f1f8f7;border:1px solid #c8e1dc';
+ const reasoningTitle=document.createElement('summary');reasoningTitle.textContent='Raciocínio clínico, indicadores e referências';reasoningTitle.style.cssText='font-weight:700;cursor:pointer;color:#164b4c';reasoning.append(reasoningTitle);
+ for(const [label,value] of tkEvidenceFor(x)){const para=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));reasoning.append(para)}
+ details.append(reasoning);
  const add=document.createElement('button');add.type='button';add.className='secondary';
  const already=selected.some(y=>y.title===x.title&&y.age===x.age);
  add.textContent=already?'✓ Já selecionada':'+ Adicionar ao planejamento';
