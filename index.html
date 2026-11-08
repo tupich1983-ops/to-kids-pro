@@ -440,6 +440,35 @@ const tkEvidenceGuides={
  'Cognição':{focus:'Atenção, antecipação, resolução de problemas e transferência para situações do cotidiano.',goal:'Apoiar uma estratégia funcional que a criança consiga usar durante uma ocupação significativa.',measure:'Registrar pistas necessárias, sequência concluída e generalização para outra tarefa.',care:'Evitar transformar a atividade em teste de acerto/erro; graduar exigências conforme fadiga e engajamento.',basis:'Noomi Katz: cognição vinculada à ocupação e participação; EPTO-4. Adaptação autoral, não instrumento padronizado.'},
  'AVDs':{focus:'Participação real nas rotinas de autocuidado, com apoio do ambiente e do cuidador.',goal:'Aumentar autonomia possível na rotina escolhida pela criança e família.',measure:'Registrar etapas iniciadas, concluídas, tipo de ajuda e barreiras ambientais.',care:'Priorizar segurança, dignidade, consentimento e participação, não apenas velocidade ou independência total.',basis:'EPTO-4: ocupações e desempenho; Berenice Rosa Francisco: sentido da atividade humana; Checklist TO.'}
 };
+
+const tkAgeClinicalNotes=[
+ {low:'Oferecer o estímulo próximo à linha média, em períodos breves, acompanhando sinais de atenção e conforto.',high:'Variar gradualmente posição do objeto e duração da interação, sem exigir manutenção postural.',context:'brincadeira compartilhada com cuidador, em superfície estável'},
+ {low:'Apresentar um único material por vez e facilitar exploração voluntária.',high:'Variar local do objeto e incentivar alternância de mãos quando surgir espontaneamente.',context:'brincadeira no chão com supervisão direta'},
+ {low:'Demonstrar uma ação simples e permitir exploração livre antes de pedir imitação.',high:'Combinar duas ações com objetos seguros e ampliar as oportunidades de escolha.',context:'brincadeira funcional e guardar brinquedos'},
+ {low:'Organizar uma sequência curta com demonstração e uma pista por vez.',high:'Introduzir escolha de materiais e uma segunda etapa, respeitando o ritmo da criança.',context:'brincadeira simbólica e rotina de organização'},
+ {low:'Propor desafio acessível com ajuda mínima suficiente e começo/fim visíveis.',high:'Adicionar uma variável por vez: precisão, sequência, alternância ou ambiente.',context:'brincadeira, escola ou autocuidado'},
+ {low:'Permitir planejamento da tarefa com suporte visual e tempo para autocorreção.',high:'Aumentar etapas e transferir a estratégia para outra rotina significativa.',context:'rotinas escolares, jogos e tarefas domésticas'},
+ {low:'Combinar objetivo com a criança, permitindo escolha da estratégia e dos materiais.',high:'Introduzir dupla tarefa apenas quando segura e funcional, com revisão do próprio desempenho.',context:'autocuidado, escola, lazer e participação comunitária'}
+];
+function tkClinicalDeepening(x){
+ const age=tkAgeClinicalNotes[Math.max(0,Math.min(6,Number(x.age)||0))];
+ const area=x.area||'Motricidade';
+ const sensory=area==='Sensorial',cognitive=area==='Cognição',adl=area==='AVDs';
+ const focus=sensory?'preferência sensorial, participação voluntária e recuperação após pausas':cognitive?'planejamento, pistas necessárias e transferência da estratégia':adl?'sequência funcional, autonomia possível e barreiras ambientais':'qualidade do movimento, coordenação e ajuda necessária';
+ const context=age.context;
+ const outcome=sensory?'tempo de exploração voluntária e sinais de conforto':cognitive?'etapas realizadas e pistas utilizadas':adl?'etapas funcionais concluídas com apoio identificado':'tentativas funcionais e nível de assistência';
+ return [
+ ['Análise individualizada da atividade','Atividade: '+x.title+'. Materiais: '+x.materials+'. Exigências a observar: '+focus+'. Contexto-alvo: '+context+'.'],
+ ['Estratégia inicial',age.low+' Aplicação proposta: '+x.steps],
+ ['Progressão terapêutica',age.high+' Aumentar somente uma exigência por vez e verificar se a participação continua significativa.'],
+ ['Redução de exigência e acessibilidade','Reduzir número de etapas, distância, resistência ou estímulos concorrentes; oferecer pistas visuais, escolha de materiais e alternativa de comunicação. '+x.adapt],
+ ['Indicadores mensuráveis','Registrar por sessão: (1) participação voluntária: sim/parcial/não; (2) '+outcome+'; (3) ajuda: independente/pista verbal ou visual/ajuda física; (4) sinais de conforto, fadiga ou recusa. Comparar com a linha de base individual, sem meta normativa automática.'],
+ ['Exemplo de objetivo funcional','Em atividade de '+x.title.toLowerCase()+', ampliar participação em '+context+', conforme linha de base e prioridade pactuada com criança/família. Definir quantidade, frequência e prazo somente após avaliação individual.'],
+ ['Registro clínico sugerido','Situação e contexto: ____; tarefa e materiais: '+x.title+' / '+x.materials+'; resposta observável: ____; pistas/assistência: ____; adaptações: ____; decisão para próxima sessão: ____.'],
+ ['Segurança e limites',sensory?'Evitar exposição forçada ou estímulos vestibulares intensos; respeitar consentimento/assentimento, sinais de desconforto e contraindicações individuais. Estratégias sensoriais gerais não são protocolo ASI®.': 'Adequar tamanho dos objetos, supervisão, estabilidade postural e esforço à idade, às capacidades e à avaliação; interromper se houver risco ou desconforto.'],
+ ['Base conceitual e atribuição','Síntese original inspirada em: EPTO-4 (perfil, análise da ocupação, intervenção e resultados); Checklist de Avaliação e Registro TO (conduta, resposta, decisão); '+(cognitive?'Katz (cognição e participação ocupacional).':sensory?'Berenice Rosa Francisco (significado da atividade humana).':adl?'Berenice Rosa Francisco (atividade e participação).':'Pedral e Bastos (metodologia da intervenção).')+' Não é transcrição nem protocolo extraído literalmente das obras.']
+ ];
+}
 function tkEvidenceFor(x){
  const g=tkEvidenceGuides[x.area]||tkEvidenceGuides['Motricidade'];
  return [['Foco do raciocínio clínico',g.focus],['Meta funcional sugerida',g.goal],['Como acompanhar a evolução',g.measure],['Cuidados e contraindicações gerais',g.care],['Fundamentação conceitual',g.basis]];
@@ -460,7 +489,7 @@ function tkRenderCatalog(){
  for(const [label,value] of [['Objetivo clínico',x.area],['Materiais',x.materials],['Como aplicar',x.steps],['Adaptações',x.adapt],['O que observar',x.observe]]){const para=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));details.append(para)}
  const reasoning=document.createElement('details');reasoning.style.cssText='margin:12px 0;padding:12px;border-radius:10px;background:#f1f8f7;border:1px solid #c8e1dc';
  const reasoningTitle=document.createElement('summary');reasoningTitle.textContent='Raciocínio clínico, indicadores e referências';reasoningTitle.style.cssText='font-weight:700;cursor:pointer;color:#164b4c';reasoning.append(reasoningTitle);
- for(const [label,value] of tkEvidenceFor(x)){const para=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));reasoning.append(para)}
+ for(const [label,value] of tkEvidenceFor(x).concat(tkClinicalDeepening(x))){const para=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));reasoning.append(para)}
  details.append(reasoning);
  const add=document.createElement('button');add.type='button';add.className='secondary';
  const already=selected.some(y=>y.title===x.title&&y.age===x.age);
