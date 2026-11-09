@@ -799,13 +799,43 @@ function evoGoals(){
  if(!goals.length){const op=document.createElement('option');op.value='';op.textContent='Cadastre uma meta no PTOI primeiro';sel.append(op)}
  evoHistory();
 }
+// Edição auditável de evoluções: atualização do mesmo ID, com snapshot anterior.
+const evoEditFields=[['data','Data da sessão','date'],['atividades','Atividades e estratégias','textarea'],['medida','Desempenho mensurável','textarea'],['resposta','Participação, resposta e barreiras','textarea'],['estado','Situação da meta','select'],['proximos','Conduta e próximos passos','textarea']];
+function evoAuditLabel(editor){return typeof irEditorLabel==='function'?irEditorLabel(editor):(editor?.nome||editor?.email||'Não identificado no registro anterior')}
+function evoAuditText(c){const history=Array.isArray(c.historico_edicoes)?c.historico_edicoes:[];return 'Versão '+(Number(c.versao)||1)+' · '+history.length+' revisão(ões)';}
+function evoEditor(r,article,pid){
+ const c=r.conteudo,details=document.createElement('details');details.className='history';details.style.cssText='border:2px solid #8dcbb0;background:#f0faf4;padding:12px;margin-top:12px;border-radius:10px';
+ const summary=document.createElement('summary');summary.textContent='✏️ EDITAR ESTA EVOLUÇÃO — preservar vínculo e histórico';summary.style.cssText='font-weight:700;cursor:pointer;color:#195b40';details.append(summary);
+ const fields={};
+ for(const [key,label,kind] of evoEditFields){const lab=document.createElement('label');lab.textContent=label;let input;
+  if(kind==='select'){input=document.createElement('select');for(const name of ['Em andamento','Parcialmente alcançada','Alcançada','Revisar meta','Não iniciada']){const opt=document.createElement('option');opt.value=name;opt.textContent=name;input.append(opt)}if(c.estado&&!Array.from(input.options).some(x=>x.value===c.estado)){const opt=document.createElement('option');opt.value=c.estado;opt.textContent=c.estado;input.append(opt)}}
+  else{input=document.createElement(kind==='date'?'input':'textarea');if(kind==='date')input.type='date';else input.rows=2}
+  input.value=c[key]||'';fields[key]=input;details.append(lab,input);
+ }
+ const note=document.createElement('p');note.className='note';note.textContent='O paciente, o vínculo com a meta e a data original de criação do registro não serão alterados. Cada salvamento preserva a versão anterior.';details.append(note);
+ const save=document.createElement('button');save.type='button';save.textContent='Salvar alterações desta evolução';const status=document.createElement('p');status.setAttribute('role','status');details.append(save,status);
+ save.onclick=async()=>{if(!client){status.textContent='Entre na sua conta para editar.';return}const current=allRecords.find(x=>x.id===r.id&&x.paciente_id===pid&&x.conteudo?.formato==='tokids_evolucao_ptoi_v1');if(!current){status.textContent='Registro não encontrado. Atualize a página.';return}
+ const values=Object.fromEntries(evoEditFields.map(([k])=>[k,fields[k].value.trim()]));if(!values.data||!values.medida){status.textContent='Informe data e desempenho mensurável.';return}
+ const before=current.conteudo,changed=evoEditFields.map(([k])=>k).filter(k=>String(before[k]||'')!==values[k]);if(!changed.length){status.textContent='Nenhuma alteração identificada.';return}
+ save.disabled=true;try{const {data:authData,error:authError}=await client.auth.getUser();if(authError||!authData?.user)throw Error('Sessão não confirmada. Entre novamente.');
+ const editor={usuario_id:authData.user.id,email:authData.user.email||'',nome:professionalData.name||'',crefito:professionalData.crefito||''};const editTime=new Date().toISOString();const history=Array.isArray(before.historico_edicoes)?before.historico_edicoes.slice():[];
+ history.push({alterado_em:editTime,versao_anterior:Number(before.versao)||1,editor,campos_alterados:changed,anterior:Object.fromEntries(evoEditFields.map(([k])=>[k,before[k]||'']))});
+ const conteudo={...before,...values,versao:(Number(before.versao)||1)+1,atualizado_em:editTime,editor_ultima_alteracao:editor,historico_edicoes:history};
+ const {data,error}=await client.from('registros_clinicos').update({conteudo}).eq('id',r.id).eq('paciente_id',pid).eq('tipo','evolucao').select('id');if(error)throw error;if(!data?.length)throw Error('O banco não confirmou a atualização. Verifique as permissões RLS.');
+ await refreshData();evo$('evo-message').textContent='Evolução atualizada e versão anterior preservada no Supabase.';
+ }catch(e){status.textContent='Falha ao editar evolução: '+e.message}finally{save.disabled=false}};
+ article.append(details);
+ const history=Array.isArray(c.historico_edicoes)?c.historico_edicoes:[];
+ if(history.length){const audit=document.createElement('details');audit.className='history';const sum=document.createElement('summary');sum.textContent='📋 Histórico de alterações ('+history.length+')';audit.append(sum);
+ history.forEach((v,i)=>{const par=document.createElement('p');par.textContent='Revisão '+(i+1)+' · '+(v.alterado_em?new Date(v.alterado_em).toLocaleString('pt-BR'):'Data não registrada')+' · versão '+(v.versao_anterior||i+1)+' → '+((Number(v.versao_anterior)||i+1)+1)+' · '+evoAuditLabel(v.editor)+' · Campos: '+(v.campos_alterados||[]).join(', ');audit.append(par)});article.append(audit)}
+}
 function evoHistory(){
  const pid=evo$('evo-patient').value,box=evo$('evo-history');box.replaceChildren();
  const entries=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_evolucao_ptoi_v1');
  if(!entries.length){box.textContent='Nenhuma evolução vinculada registrada.';return}
  for(const r of entries){const c=r.conteudo,goal=allRecords.find(x=>x.paciente_id===pid&&x.conteudo?.formato==='tokids_ptoi_meta_v1'&&x.conteudo.meta_id===c.meta_id);
  const article=document.createElement('article');article.className='history';const title=document.createElement('strong');title.textContent=(c.data||'')+' · '+(goal?.conteudo?.meta||'Meta não encontrada');article.append(title);
- for(const [label,val] of [['Atividades',c.atividades],['Desempenho',c.medida],['Resposta',c.resposta],['Situação',c.estado],['Próximos passos',c.proximos]]){const line=document.createElement('p'),b=document.createElement('strong');b.textContent=label+': ';line.append(b,document.createTextNode(String(val||'Não informado')));article.append(line)}box.append(article)}
+ for(const [label,val] of [['Atividades',c.atividades],['Desempenho',c.medida],['Resposta',c.resposta],['Situação',c.estado],['Próximos passos',c.proximos]]){const line=document.createElement('p'),b=document.createElement('strong');b.textContent=label+': ';line.append(b,document.createTextNode(String(val||'Não informado')));article.append(line)}const ver=document.createElement('p');ver.textContent=evoAuditText(c);article.append(ver);evoEditor(r,article,pid);box.append(article)}
 }
 evo$('evo-patient').onchange=evoGoals;
 evo$('evo-save').onclick=async()=>{
@@ -915,6 +945,16 @@ function irAssessmentAudit(box,c,r){
  irElement('p','Este histórico resume alterações armazenadas pelo aplicativo. Identidades e registros profissionais não são verificados automaticamente; edições anteriores à identificação do editor podem não informar responsável.',audit,'ir-audit-note');
 }
 
+function irEvolutionAudit(box,c){
+ if(c.formato!=='tokids_evolucao_ptoi_v1')return;
+ const history=Array.isArray(c.historico_edicoes)?c.historico_edicoes:[];
+ const audit=irElement('div',null,box,'ir-assessment-audit');irElement('strong','Rastreabilidade da evolução',audit);
+ irLine(audit,'Versão atual',String(c.versao||1));
+ if(c.atualizado_em){irLine(audit,'Última alteração',irDateTimeBR(c.atualizado_em));irLine(audit,'Responsável pela última alteração',irEditorLabel(c.editor_ultima_alteracao))}
+ else irElement('p','Nenhuma edição posterior registrada.',audit);
+ if(history.length){irElement('strong','Histórico de revisões ('+history.length+')',audit);history.forEach((v,i)=>{const line=irElement('div',null,audit,'ir-audit-entry');irElement('strong','Revisão '+(i+1)+' · '+irDateTimeBR(v.alterado_em)+' · versão '+(v.versao_anterior||i+1)+' → '+((Number(v.versao_anterior)||i+1)+1),line);irLine(line,'Profissional/conta da revisão',irEditorLabel(v.editor));irLine(line,'Campos alterados',(v.campos_alterados||[]).join('; ')||'Não informados')})}
+ irElement('p','Histórico armazenado pelo aplicativo. Identificação profissional informada pela conta, não verificada automaticamente.',audit,'ir-audit-note');
+}
 function irDeadline(value){const labels={curto:'Curto prazo',medio:'Médio prazo',médio:'Médio prazo',longo:'Longo prazo'};const raw=String(value??'').trim();return labels[raw.toLowerCase()]||raw||'Prazo não informado'}
 function irGoalFields(box,c){
  const fields=[['Meta',c.meta],['Linha de base',c.linha_base],['Critério de alcance',c.criterio],['Estratégias',c.estrategias]];
@@ -950,7 +990,7 @@ function irBuild(target,records,patient,notes){
  for(const g of goals){const c=g.conteudo,box=irElement('div',null,target,'history');irElement('h5',irDeadline(c.prazo)+' · '+(c.area||'Área não informada'),box);irGoalFields(box,c);
  const linked=records.filter(r=>(r.conteudo?.formato===irFormats.tracking||r.conteudo?.formato===irFormats.evolution)&&r.conteudo.meta_id===c.meta_id).slice().reverse();
  if(!linked.length)irElement('p','Sem acompanhamento ou evolução vinculada registrada.',box);
- for(const r of linked){const d=r.conteudo;irElement('strong',irDateBR(d.data||r.criado_em)+' · '+(r.conteudo.formato===irFormats.evolution?'Evolução':'Acompanhamento'),box);irLine(box,'Situação informada',d.estado);irLine(box,'Desempenho registrado',d.medida);irLine(box,'Atividades',d.atividades);irLine(box,'Resposta',d.resposta);irLine(box,'Observações',d.observacao);irLine(box,'Próximos passos',d.proximos)}
+ for(const r of linked){const d=r.conteudo;irElement('strong',irDateBR(d.data||r.criado_em)+' · '+(r.conteudo.formato===irFormats.evolution?'Evolução':'Acompanhamento'),box);irLine(box,'Situação informada',d.estado);irLine(box,'Desempenho registrado',d.medida);irLine(box,'Atividades',d.atividades);irLine(box,'Resposta',d.resposta);irLine(box,'Observações',d.observacao);irLine(box,'Próximos passos',d.proximos);irEvolutionAudit(box,d)}
  }
  const seenLegacyPlans=new Set();
  for(const r of legacyPlans){
@@ -961,7 +1001,7 @@ function irBuild(target,records,patient,notes){
  section('3. Outras evoluções clínicas');
  const unlinked=evolutions.filter(r=>!goals.some(g=>g.conteudo.meta_id===r.conteudo.meta_id));
  if(!legacyEvos.length&&!unlinked.length)irElement('p','As evoluções vinculadas às metas estão apresentadas na seção 2.',target);
- for(const r of [...legacyEvos,...unlinked]){const box=irElement('div',null,target,'history');irElement('strong',(r.titulo||'Evolução')+' · '+irDate(r),box);for(const [k,v] of Object.entries(r.conteudo.campos||r.conteudo)){if(['formato','versao','modulo','meta_id','data'].includes(k))continue;irLine(box,moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k,v)}}
+ for(const r of [...legacyEvos,...unlinked]){const box=irElement('div',null,target,'history');irElement('strong',(r.titulo||'Evolução')+' · '+irDate(r),box);for(const [k,v] of Object.entries(r.conteudo.campos||r.conteudo)){if(['formato','versao','modulo','meta_id','data','historico_edicoes','atualizado_em','editor_ultima_alteracao'].includes(k))continue;irLine(box,moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k,v)}}
  section('4. Observações e conclusão do terapeuta');
  irElement('p',notes.trim()||'Nenhuma observação complementar informada.',target);
  const sign=irElement('section',null,target,'ir-signature');
