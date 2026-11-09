@@ -25,7 +25,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 #ptoi-root h3{margin-top:0}#ptoi-root .ptoi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 #ptoi-root .ptoi-grid>div{min-width:0}#ptoi-root label{display:block;margin:8px 0 4px;font-weight:600}
 #ptoi-root input,#ptoi-root select,#ptoi-root textarea{box-sizing:border-box;width:100%;max-width:100%}
-#ptoi-root .ptoi-card{padding:13px;border:1px solid #cbded8;border-radius:10px;background:white;margin:12px 0}
+#ptoi-root .ptoi-editor{margin:14px 0;padding:12px 14px;border:2px solid #147d71;border-radius:10px;background:#edf8f4}#ptoi-root .ptoi-editor>summary{cursor:pointer;font-weight:750;color:#075f54;list-style:revert}#ptoi-root .ptoi-editor[open]{background:#f8fcfa}#ptoi-root .ptoi-card{padding:13px;border:1px solid #cbded8;border-radius:10px;background:white;margin:12px 0}
 #ptoi-root .ptoi-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 #ptoi-root .ptoi-note{font-size:13px;color:#496b63}#ptoi-root .ptoi-goal-title{font-weight:700}
 @media(max-width:650px){#ptoi-root .ptoi-grid{grid-template-columns:1fr}}
@@ -618,7 +618,7 @@ function ptoiRender(){
   }
   // Edicao in-place: preserva meta_id, vinculos com evolucoes e registros historicos.
   const editor=ptoiElement('details');editor.className='ptoi-editor';
-  editor.append(ptoiElement('summary','Editar esta meta (sem criar outra)'));
+  editor.append(ptoiElement('summary','✏️ EDITAR ESTA META — manter evoluções existentes'));
   const editFields=[
    ['meta','Meta funcional e observável','textarea'],
    ['linha_base','Linha de base / desempenho atual','textarea'],
