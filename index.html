@@ -242,8 +242,12 @@ $('wizardfinish').onclick=async()=>{
    if(!original)throw Error('Avaliação original não encontrada. Recarregue a página.');
    const before=original.conteudo;
    const historico=Array.isArray(before.historico_edicoes)?before.historico_edicoes.slice():[];
-   historico.push({alterado_em:new Date().toISOString(),etapas:before.etapas||[],versao_anterior:before.versao||1});
-   const conteudo={...before,etapas,versao:(Number(before.versao)||1)+1,atualizado_em:new Date().toISOString(),historico_edicoes:historico};
+   const editTime=new Date().toISOString();
+   const {data:authData,error:authError}=await client.auth.getUser();
+   if(authError||!authData?.user)throw Error('Sessão não confirmada. Entre novamente antes de editar.');
+   const editor={usuario_id:authData.user.id,email:authData.user.email||'',nome:professionalData.name||'',crefito:professionalData.crefito||''};
+   historico.push({alterado_em:editTime,etapas:before.etapas||[],versao_anterior:before.versao||1,editor});
+   const conteudo={...before,etapas,versao:(Number(before.versao)||1)+1,atualizado_em:editTime,editor_ultima_alteracao:editor,historico_edicoes:historico};
    const {data,error}=await client.from('registros_clinicos').update({conteudo}).eq('id',wizardEditingId).eq('paciente_id',paciente_id).select('id');
    if(error)throw error;if(!data?.length)throw Error('A atualização não foi confirmada. Verifique as permissões de edição (RLS).');
   }else{
@@ -873,6 +877,44 @@ function irDateBR(value){
  return match?match[3]+'/'+match[2]+'/'+match[1]:(raw||'Data não informada');
 }
 function irDate(r){return irDateBR(r.conteudo?.data||r.criado_em)}
+function irDateTimeBR(value){
+ if(!value)return 'Não registrada';
+ const d=new Date(value);return Number.isNaN(d.getTime())?'Não registrada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+}
+function irEditorLabel(editor){
+ if(!editor||!editor.usuario_id)return 'Não identificado no registro anterior';
+ const name=String(editor.nome||'').trim(),email=String(editor.email||'').trim();
+ return (name||email||'Usuário autenticado')+(name&&email?' ('+email+')':'')+(editor.crefito?' · '+editor.crefito:'')+' — identificação informada pela conta, não verificada';
+}
+function irChangedFields(before,after){
+ const map=steps=>{const fields=new Map();for(const step of steps||[])for(const f of step.campos||[])fields.set((step.titulo||'')+' / '+(f.rotulo||f.campo||''),String(f.valor??''));return fields};
+ const old=map(before),now=map(after);return [...new Set([...old.keys(),...now.keys()])].filter(k=>(old.get(k)||'')!==(now.get(k)||''));
+}
+function irAssessmentAudit(box,c,r){
+ if(c.formato!=='tokids_avaliacao_completa_v1')return;
+ const audit=irElement('div',null,box,'ir-assessment-audit');
+ irElement('strong','Rastreabilidade da avaliação',audit);
+ irLine(audit,'Data original da avaliação',c.data?irDateBR(c.data):irDateBR(r.criado_em));
+ irLine(audit,'Versão atual',String(c.versao||1));
+ if(c.atualizado_em){
+  irLine(audit,'Última alteração',irDateTimeBR(c.atualizado_em));
+  irLine(audit,'Responsável pela última alteração',irEditorLabel(c.editor_ultima_alteracao));
+ }else irElement('p','Nenhuma edição posterior registrada.',audit);
+ const versions=Array.isArray(c.historico_edicoes)?c.historico_edicoes:[];
+ if(versions.length){
+  irElement('strong','Histórico de revisões ('+versions.length+')',audit);
+  versions.forEach((v,i)=>{
+   const row=irElement('div',null,audit,'ir-audit-entry');
+   irElement('strong','Revisão '+(i+1)+' · '+irDateTimeBR(v.alterado_em)+' · versão '+(v.versao_anterior||i+1)+' → '+((Number(v.versao_anterior)||i+1)+1),row);
+   irLine(row,'Profissional/conta da revisão',irEditorLabel(v.editor));
+   const next=i+1<versions.length?versions[i+1].etapas:c.etapas;
+   const changed=irChangedFields(v.etapas,next);
+   irLine(row,'Campos alterados',changed.length?changed.join('; '):'Sem diferenças textuais identificadas');
+  });
+ }
+ irElement('p','Este histórico resume alterações armazenadas pelo aplicativo. Identidades e registros profissionais não são verificados automaticamente; edições anteriores à identificação do editor podem não informar responsável.',audit,'ir-audit-note');
+}
+
 function irDeadline(value){const labels={curto:'Curto prazo',medio:'Médio prazo',médio:'Médio prazo',longo:'Longo prazo'};const raw=String(value??'').trim();return labels[raw.toLowerCase()]||raw||'Prazo não informado'}
 function irGoalFields(box,c){
  const fields=[['Meta',c.meta],['Linha de base',c.linha_base],['Critério de alcance',c.criterio],['Estratégias',c.estrategias]];
@@ -901,6 +943,7 @@ function irBuild(target,records,patient,notes){
  if(Array.isArray(c.etapas)){for(const step of c.etapas){const values=(step.campos||[]).filter(f=>String(f.valor||'').trim());if(!values.length)continue;irElement('h5',step.titulo,box);for(const f of values)irLine(box,f.rotulo,f.valor)}}
  else if(c.formato==='avaliacao_estruturada_v1'){irLine(box,'Demanda',c.demanda);irLine(box,'Observações',c.observacoes);for(const d of c.dominios||[])irLine(box,d.dominio,d.nivel)}
  else for(const [k,v] of Object.entries(c.campos||{})){const label=moduleSchemas[c.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;irLine(box,label,v)}
+ irAssessmentAudit(box,c,r);
  }
  section('2. Metas do PTOI e acompanhamento');
  if(!goals.length&&!legacyPlans.length)irElement('p','Nenhum plano ou meta cadastrada.',target);
@@ -941,7 +984,7 @@ ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(
  if(!professionalData.name||!professionalData.crefito){ir('ir-status').textContent='Antes de imprimir, preencha seu nome e CREFITO em Meu Perfil.';return}
  const w=window.open('','_blank');if(!w){ir('ir-status').textContent='Permita janelas pop-up para imprimir.';return}
  const d=w.document;d.title='Relatório de evolução terapêutica — TO Kids PRO';
- const st=d.createElement('style');st.textContent=`@page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
+ const st=d.createElement('style');st.textContent=`@page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}.ir-assessment-audit{margin-top:14px;padding-top:10px;border-top:1px dashed #b7d5cc;font-size:11px}.ir-assessment-audit>strong{display:block;color:#176c60;margin:5px 0}.ir-audit-entry{padding:7px 0;border-top:1px solid #e2eeea;break-inside:avoid-page}.ir-audit-entry>strong{display:block}.ir-audit-note{font-size:10px;color:#61736f}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
  d.head.append(st);irBuild(d.body,irPatientRecords(),p,ir('ir-notes').value);d.close();w.focus();w.print();ir('ir-status').textContent='Na janela de impressão, desmarque Cabeçalhos e rodapés em Mais configurações para ocultar about:blank, data e numeração automática.'
 };
 const irOriginalRefresh=refreshData;
