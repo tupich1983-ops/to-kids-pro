@@ -123,7 +123,7 @@ async function refreshData(){
   const b=document.createElement('button');b.type='button';b.className='secondary patient-button';b.style.cssText='display:block;width:100%;text-align:left;margin:8px 0';b.textContent=p.nome+' · '+ageLabel(p)+' · '+(p.dados?.diagnostico||'Sem diagnóstico informado');b.onclick=()=>setSelectedPatient(p.id);$('patientlist').append(b);
   for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;$(name).append(o)}
  }
- const {data:rs,error:re}=await client.from('registros_clinicos').select('paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
+ const {data:rs,error:re}=await client.from('registros_clinicos').select('id,paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
  if(re){msg('Erro ao carregar registros: '+re.message,true);return}
  allRecords=rs||[];
  if(!patientRows.some(p=>p.id===selectedPatientId))selectedPatientId=patientRows[0]?.id||null;
@@ -616,6 +616,47 @@ function ptoiRender(){
   for(const [label,value] of [['Linha de base',d.linha_base],['Critério de alcance',d.criterio],['Estratégias e adaptações',d.estrategias],['Revisão prevista',ptoiDate(d.revisao)]]){
    const par=ptoiElement('p');const strong=ptoiElement('strong',label+': ');par.append(strong,document.createTextNode(ptoiSafe(value)));card.append(par)
   }
+  // Edicao in-place: preserva meta_id, vinculos com evolucoes e registros historicos.
+  const editor=ptoiElement('details');editor.className='ptoi-editor';
+  editor.append(ptoiElement('summary','Editar esta meta (sem criar outra)'));
+  const editFields=[
+   ['meta','Meta funcional e observável','textarea'],
+   ['linha_base','Linha de base / desempenho atual','textarea'],
+   ['criterio','Critério de alcance','textarea'],
+   ['estrategias','Estratégias e adaptações','textarea'],
+   ['revisao','Data prevista para revisão','date']
+  ];
+  const editInputs={};
+  const editGrid=ptoiElement('div');
+  for(const [key,label,kind] of editFields){
+   const lab=ptoiElement('label',label),field=ptoiElement(kind==='textarea'?'textarea':'input');
+   if(kind==='date')field.type='date';else field.rows=2;
+   field.value=ptoiSafe(d[key]);editInputs[key]=field;editGrid.append(lab,field);
+  }
+  const periodLab=ptoiElement('label','Prazo da meta'),periodEdit=ptoiElement('select');
+  for(const [key,label] of Object.entries(periodNames)){const opt=ptoiElement('option',label);opt.value=key;periodEdit.append(opt)}
+  periodEdit.value=d.prazo||'curto';editGrid.append(periodLab,periodEdit);
+  const areaLab=ptoiElement('label','Área ocupacional / domínio'),areaEdit=ptoiElement('input');areaEdit.value=ptoiSafe(d.area);editGrid.append(areaLab,areaEdit);
+  const editSave=ptoiElement('button','Salvar alterações nesta meta');editSave.type='button';
+  const editCancel=ptoiElement('button','Cancelar edição','secondary');editCancel.type='button';
+  editCancel.onclick=()=>{for(const [key] of editFields)editInputs[key].value=ptoiSafe(d[key]);periodEdit.value=d.prazo||'curto';areaEdit.value=ptoiSafe(d.area);editor.open=false};
+  editSave.onclick=async()=>{
+   if(!client||!g.id)return ptoiStatus('Não foi possível identificar o registro da meta. Atualize a página.',true);
+   if(ptoi$('ptoi-patient').value!==pid)return ptoiStatus('O paciente ativo mudou. Reabra a meta.',true);
+   const values=Object.fromEntries(editFields.map(([key])=>[key,editInputs[key].value.trim()]));
+   if(!values.meta||!values.linha_base||!values.criterio)return ptoiStatus('Meta, linha de base e critério são obrigatórios.',true);
+   if(!areaEdit.value.trim())return ptoiStatus('Informe a área ocupacional.',true);
+   editSave.disabled=true;
+   try{
+    const conteudo={...d,...values,prazo:periodEdit.value,area:areaEdit.value.trim()};
+    const titulo='PTOI — '+conteudo.prazo+' — '+conteudo.area;
+    const {data,error}=await client.from('registros_clinicos').update({titulo,conteudo}).eq('id',g.id).eq('paciente_id',pid).select('id');
+    if(error)throw error;
+    if(!data?.length)throw new Error('Nenhuma meta foi atualizada. Verifique as permissões de edição no Supabase.');
+    await refreshData();ptoiStatus('Meta atualizada. O histórico e as evoluções vinculadas foram preservados.');
+   }catch(e){ptoiStatus('Falha ao atualizar meta: '+e.message,true)}finally{editSave.disabled=false}
+  };
+  const actions=ptoiElement('div',undefined,'ptoi-actions');actions.append(editSave,editCancel);editGrid.append(actions);editor.append(editGrid);card.append(editor);
   const progress=records.filter(r=>r.conteudo.formato==='tokids_ptoi_acompanhamento_v1'&&r.conteudo.meta_id===d.meta_id).slice().reverse();
   const latest=progress[progress.length-1];
   card.append(ptoiElement('p','Situação atual: '+(latest?latest.conteudo.estado:'Ainda não acompanhada'),'ptoi-note'));
