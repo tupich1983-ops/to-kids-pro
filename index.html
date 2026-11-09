@@ -414,10 +414,10 @@ function moveClinical(dest,preferred){if(clinicalSection.parentElement!==dest)de
 function openPage(id){if(!moduleSections[id])return;currentPage=id;updateActivePatientUI();
  if(['sensory','feeding','library'].includes(id))moveLegacy(moduleSections[id],id==='sensory'?'sensory':id==='feeding'?'foodactivities':'library');
  if(['sensory','feeding','library'].includes(id))tkCatalogMode(id==='library');
- if(['planning','progress','reports'].includes(id))moveClinical(moduleSections[id],id==='progress'?'evolucao':id==='planning'?'plano_terapeutico':null);
+ if(['planning','progress'].includes(id))moveClinical(moduleSections[id],id==='progress'?'evolucao':'plano_terapeutico');
  for(const [key,el] of Object.entries(moduleSections))el.hidden=key!==id;
  $('worktitle').textContent=titles[id];document.querySelectorAll('.dashboard-tile').forEach(b=>{b.classList.toggle('active',b.dataset.page===id);b.setAttribute('aria-pressed',String(b.dataset.page===id))});
- if(id==='reports'){$('printreport').scrollIntoView({block:'nearest'});}
+ if(id==='reports'&&document.getElementById('integrated-report'))document.getElementById('integrated-report').scrollIntoView({block:'nearest'});
  $('workspace').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -763,6 +763,10 @@ const integratedReport=document.createElement('section');
 integratedReport.id='integrated-report';
 integratedReport.innerHTML=`<h3>Relatório de evolução terapêutica integrado</h3><p class="note">Versão de teste: somente dados fictícios. A síntese organiza registros existentes; não calcula resultados clínicos nem substitui o julgamento profissional.</p><label for="ir-patient">Paciente fictício</label><select id="ir-patient"></select><button type="button" id="ir-refresh" class="secondary">Atualizar dados</button><div id="ir-preview" aria-live="polite"></div><label for="ir-notes">Observações e conclusão do terapeuta (editáveis)</label><textarea id="ir-notes" rows="6" placeholder="Descreva uma síntese clínica fundamentada nos registros, limitações e recomendações. Use apenas dados fictícios."></textarea><button type="button" id="ir-save">Salvar observações no Supabase</button><button type="button" id="ir-print" class="secondary">Imprimir / salvar relatório integrado em PDF</button><p id="ir-status" role="status" aria-live="polite"></p>`;
 reportsPanel.insertBefore(integratedReport,reportsPanel.firstChild);
+const unifiedReportHelp=document.createElement('p');
+unifiedReportHelp.className='note';
+unifiedReportHelp.textContent='Este é o relatório único do paciente. Para criar ou editar planos terapêuticos e evoluções, utilize os módulos Planejar sessões e Evoluções clínicas. Os registros anteriores permanecem preservados no Supabase e são consultados aqui.';
+integratedReport.insertBefore(unifiedReportHelp,integratedReport.children[1]);
 const ir=id=>document.getElementById(id);
 const irFormats={assessment:['tokids_avaliacao_completa_v1','avaliacao_estruturada_v1'],goal:'tokids_ptoi_meta_v1',tracking:'tokids_ptoi_acompanhamento_v1',evolution:'tokids_evolucao_ptoi_v1',notes:'tokids_relatorio_observacoes_v1'};
 const irText=value=>String(value??'').replace(/\\n/g,'\n');
