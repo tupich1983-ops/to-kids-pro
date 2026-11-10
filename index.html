@@ -876,6 +876,46 @@ evoSync();
 const professionalProfile=document.createElement('section');
 professionalProfile.innerHTML=`<h3>Meu Perfil Profissional</h3><p class="note">Preencha seu nome completo e, quando desejar, o registro no CREFITO. Os dados são vinculados à sua conta do Supabase. Este cadastro não verifica habilitação profissional.</p><label for="prof-name">Nome completo</label><input id="prof-name" autocomplete="name" maxlength="140" placeholder="Nome completo do terapeuta ocupacional"><label for="prof-email">E-mail da conta</label><input id="prof-email" readonly><label for="prof-crefito">CREFITO (preencher posteriormente)</label><input id="prof-crefito" maxlength="60" placeholder="Ex.: CREFITO-8 / 00000-TO"><p style="font-size:13px;color:#496b63">Profissão exibida no relatório: Terapeuta Ocupacional. Informe o número real e correto do seu registro antes de emitir documentos profissionais.</p><button id="prof-save" type="button">Salvar meu perfil no Supabase</button><p id="prof-status" role="status" aria-live="polite"></p>`;
 profilePanel.append(professionalProfile);
+// Assinatura Mercado Pago: inicia checkout autenticado pela Edge Function.
+// Nenhuma credencial privada é armazenada no navegador.
+const subscriptionPanel=document.createElement('section');
+subscriptionPanel.id='subscription-panel';
+subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
+<p><strong>Plano Profissional — R$ 29,90 por mês</strong></p>
+<p>7 dias grátis, conforme as condições apresentadas no checkout do Mercado Pago.</p>
+<p class="note"><strong>Integração em testes.</strong> A confirmação automática do pagamento e a liberação ou suspensão de acesso ainda precisam ser validadas antes do lançamento. Não utilize dados reais de pacientes.</p>
+<button type="button" id="subscribe-mp">Assinar por R$ 29,90/mês — 7 dias grátis</button>
+<p id="subscription-feedback" role="status" aria-live="polite"></p>`;
+profilePanel.append(subscriptionPanel);
+$('subscribe-mp').addEventListener('click',async()=>{
+ const button=$('subscribe-mp'),status=$('subscription-feedback');
+ if(!client){status.textContent='Conexão indisponível. Entre novamente.';return}
+ button.disabled=true;
+ status.textContent='Preparando o checkout seguro…';
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
+  // Uma assinatura pode gerar cobranças reais. O usuário deve confirmar antes de sair.
+  if(!confirm('Você será encaminhado ao Mercado Pago. Confirme no checkout o período grátis, o preço e as condições antes de concluir a assinatura. Deseja continuar?')){
+   status.textContent='Operação cancelada.';return;
+  }
+  const response=await fetch(PUBLIC_SUPABASE_URL+'/functions/v1/criar-assinatura',{
+   method:'POST',
+   headers:{'Authorization':'Bearer '+session.access_token,'apikey':PUBLIC_SUPABASE_KEY,'Content-Type':'application/json'},
+   body:JSON.stringify({})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||'Falha ao iniciar a assinatura (HTTP '+response.status+').');
+  const checkout=result.checkout_url;
+  if(typeof checkout!=='string'||!/^https:\/\/(?:www\.)?(?:mercadopago\.com(?:\.br)?|mpago\.la)\//i.test(checkout)){
+   throw new Error('O servidor não retornou um endereço válido do Mercado Pago.');
+  }
+  status.textContent='Redirecionando ao Mercado Pago…';
+  window.location.assign(checkout);
+ }catch(error){status.textContent='Não foi possível abrir o checkout: '+error.message;}
+ finally{button.disabled=false}
+});
+
 let professionalData={name:'',crefito:'',email:''};
 function profileFromUser(user){const m=user?.user_metadata||{};professionalData={name:String(m.tokids_nome_completo||'').trim(),crefito:String(m.tokids_crefito||'').trim(),email:user?.email||''};
  document.getElementById('prof-name').value=professionalData.name;document.getElementById('prof-crefito').value=professionalData.crefito;document.getElementById('prof-email').value=professionalData.email;
