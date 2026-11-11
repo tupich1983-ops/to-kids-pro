@@ -876,8 +876,7 @@ evoSync();
 const professionalProfile=document.createElement('section');
 professionalProfile.innerHTML=`<h3>Meu Perfil Profissional</h3><p class="note">Preencha seu nome completo e, quando desejar, o registro no CREFITO. Os dados são vinculados à sua conta do Supabase. Este cadastro não verifica habilitação profissional.</p><label for="prof-name">Nome completo</label><input id="prof-name" autocomplete="name" maxlength="140" placeholder="Nome completo do terapeuta ocupacional"><label for="prof-email">E-mail da conta</label><input id="prof-email" readonly><label for="prof-crefito">CREFITO (preencher posteriormente)</label><input id="prof-crefito" maxlength="60" placeholder="Ex.: CREFITO-8 / 00000-TO"><p style="font-size:13px;color:#496b63">Profissão exibida no relatório: Terapeuta Ocupacional. Informe o número real e correto do seu registro antes de emitir documentos profissionais.</p><button id="prof-save" type="button">Salvar meu perfil no Supabase</button><p id="prof-status" role="status" aria-live="polite"></p>`;
 profilePanel.append(professionalProfile);
-// Assinatura Mercado Pago: abre o link oficial de adesão do plano.
-// A adesão por link não associa automaticamente o pagamento ao usuário autenticado.
+// Assinatura Mercado Pago: checkout individual autenticado via Edge Function v2.
 const subscriptionPanel=document.createElement('section');
 subscriptionPanel.id='subscription-panel';
 subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
@@ -903,19 +902,43 @@ subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
 <p id="subscription-link-history" style="font-size:13px;color:#496b63">Nenhuma solicitação consultada.</p>
 <p style="font-size:13px;color:#795a20">A solicitação não comprova a titularidade nem ativa o plano. A liberação depende de verificação independente e aprovação segura.</p>
 </div>
-<p style="font-size:13px;color:#496b63">A situação exibida vem do registro da sua conta no Supabase. O checkout por link ainda não vincula automaticamente a contratação ao terapeuta. Nenhum acesso é liberado por esta tela.</p>
+<p style="font-size:13px;color:#496b63">A situação exibida vem do registro da sua conta no Supabase. O novo checkout individual está em testes. A liberação de acesso ainda depende da confirmação segura do Mercado Pago e da validação das regras no servidor. Nenhum acesso é liberado por esta tela.</p>
 </div>`;
 profilePanel.append(subscriptionPanel);
-$('subscribe-mp').addEventListener('click',()=>{
+// Checkout individual: a função Edge valida o JWT e assina a referência do terapeuta.
+// Nunca usar o checkout compartilhado como fallback: ele não identifica o titular.
+let subscriptionCheckoutBusy=false;
+$('subscribe-mp').addEventListener('click',async()=>{
  const status=$('subscription-feedback');
- if(!client){status.textContent='Conexão indisponível. Entre novamente.';return}
- const checkout='https://mpago.la/1tf2GLp';
- if(!confirm('Você será encaminhado ao Mercado Pago. Antes de contratar, confira o preço, os 7 dias grátis e as condições exibidas no checkout. A liberação automática do acesso ainda não está ativa. Deseja continuar?')){
-  status.textContent='Operação cancelada.';
-  return;
+ const button=$('subscribe-mp');
+ if(subscriptionCheckoutBusy)return;
+ if(!client){status.textContent='Conexão indisponível. Entre novamente.';return;}
+ if(!confirm('Vamos solicitar um checkout individual ao Mercado Pago. Confira preço, período gratuito e condições antes de contratar. A integração continua em testes. Deseja continuar?')){
+  status.textContent='Operação cancelada.';return;
  }
- status.textContent='Abrindo a página oficial de adesão do Mercado Pago…';
- window.location.assign(checkout);
+ subscriptionCheckoutBusy=true;button.disabled=true;
+ status.textContent='Validando sua sessão e solicitando checkout individual…';
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session?.access_token)throw Error('Entre novamente na sua conta para contratar.');
+  const {data,error}=await client.functions.invoke('criar-assinatura-v2',{
+   body:{},headers:{Authorization:'Bearer '+session.access_token}
+  });
+  if(error){
+   let detail=null;
+   try{detail=await error.context?.json?.()}catch{}
+   throw Error(detail?.detail||detail?.error||'Não foi possível criar o checkout individual.');
+  }
+  if(!data?.success||typeof data.checkout_url!=='string')throw Error(data?.error||'O Mercado Pago não retornou um checkout válido.');
+  const checkoutUrl=new URL(data.checkout_url);
+  if(checkoutUrl.protocol!=='https:'||!['www.mercadopago.com','mercadopago.com','www.mercadopago.com.br','mercadopago.com.br'].includes(checkoutUrl.hostname)){
+   throw Error('Endereço de checkout não reconhecido. A contratação foi interrompida por segurança.');
+  }
+  status.textContent='Checkout individual criado. Redirecionando ao Mercado Pago…';
+  window.location.assign(checkoutUrl.href);
+ }catch(e){
+  status.textContent='Não foi possível abrir o checkout individual: '+(e?.message||'erro inesperado')+'. Nenhuma assinatura foi ativada nesta tela.';
+ }finally{subscriptionCheckoutBusy=false;button.disabled=false;}
 });
 
 // Consulta somente leitura: a tabela assinaturas possui RLS por terapeuta.
