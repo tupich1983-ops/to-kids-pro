@@ -369,7 +369,7 @@ $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('librar
 
 $('refresh').onclick=refreshData;
 function msg(t,error=false){$('status').textContent=t;$('status').className=error?'err':''}
-async function display(session){if(session){profileFromUser(session.user);void loadProfessionalProfile();void refreshSubscriptionStatus();$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src');resetSubscriptionStatus()}}
+async function display(session){if(session){profileFromUser(session.user);void loadProfessionalProfile();void refreshSubscriptionStatus();void refreshSubscriptionRequests();$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src');resetSubscriptionStatus()}}
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
 // Fluxo oficial Supabase Auth: solicita link, valida a sessão de recuperação e troca a senha.
@@ -893,6 +893,16 @@ subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
 <p id="subscription-trial-date" hidden></p>
 <p id="subscription-renewal-date" hidden></p>
 <button type="button" class="secondary" id="subscription-refresh">Atualizar situação</button>
+<div class="history" id="subscription-link-request">
+<h4>Solicitar vinculação de uma assinatura existente</h4>
+<p>Se você já contratou pelo Mercado Pago, informe o <strong>ID da assinatura (preapproval)</strong>, disponível nos detalhes da contratação ou no atendimento do Mercado Pago. Não informe dados do cartão, senhas ou códigos de acesso.</p>
+<label for="subscription-link-id">ID da assinatura no Mercado Pago</label>
+<input id="subscription-link-id" type="text" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Identificador da assinatura">
+<button type="button" id="subscription-link-submit">Solicitar verificação</button>
+<p id="subscription-link-feedback" role="status" aria-live="polite"></p>
+<p id="subscription-link-history" style="font-size:13px;color:#496b63">Nenhuma solicitação consultada.</p>
+<p style="font-size:13px;color:#795a20">A solicitação não comprova a titularidade nem ativa o plano. A liberação depende de verificação independente e aprovação segura.</p>
+</div>
 <p style="font-size:13px;color:#496b63">A situação exibida vem do registro da sua conta no Supabase. O checkout por link ainda não vincula automaticamente a contratação ao terapeuta. Nenhum acesso é liberado por esta tela.</p>
 </div>`;
 profilePanel.append(subscriptionPanel);
@@ -952,7 +962,51 @@ async function refreshSubscriptionStatus(){
  }catch(e){if(requestNumber===subscriptionRequestNumber){label.textContent='Consulta indisponível';detail.textContent=e.message||'Falha ao consultar a assinatura.';}}
  finally{if(requestNumber===subscriptionRequestNumber)button.disabled=false;}
 }
-$('subscription-refresh').addEventListener('click',refreshSubscriptionStatus);
+$('subscription-refresh').addEventListener('click',async()=>{await refreshSubscriptionStatus();await refreshSubscriptionRequests();});
+
+// Solicitação de vínculo: apenas o backend pode criar pedidos, e nenhum pedido libera acesso.
+let subscriptionLinkBusy=false;
+async function refreshSubscriptionRequests(){
+ const output=$('subscription-link-history');
+ if(!output||!client)return;
+ try{
+  const {data:{user},error:authError}=await client.auth.getUser();
+  if(authError||!user){output.textContent='Entre na sua conta para consultar suas solicitações.';return;}
+  const {data,error}=await client.from('solicitacoes_vinculacao')
+   .select('status,created_at').eq('terapeuta_id',user.id)
+   .order('created_at',{ascending:false}).limit(5);
+  if(error)throw error;
+  const names={aguardando_verificacao:'Aguardando verificação',em_analise:'Em análise',aprovada:'Aprovada (sujeita à confirmação da assinatura)',rejeitada:'Rejeitada'};
+  output.textContent=data?.length?'Solicitações: '+data.map(x=>(names[x.status]||'Em verificação')+' — '+new Date(x.created_at).toLocaleDateString('pt-BR')).join(' | '):'Nenhuma solicitação registrada nesta conta.';
+ }catch(e){output.textContent='Não foi possível consultar as solicitações. Verifique a conexão.';}
+}
+$('subscription-link-submit').addEventListener('click',async()=>{
+ if(subscriptionLinkBusy||!client)return;
+ const input=$('subscription-link-id'),feedback=$('subscription-link-feedback');
+ const id=input.value.trim();
+ if(!/^[a-zA-Z0-9_-]{1,128}$/.test(id)){
+  feedback.textContent='Informe um ID de assinatura válido, sem espaços ou links.';return;
+ }
+ if(!confirm('Enviar este identificador para verificação? Isso não ativa sua assinatura e não realiza cobrança.'))return;
+ subscriptionLinkBusy=true;$('subscription-link-submit').disabled=true;
+ feedback.textContent='Consultando o Mercado Pago com segurança…';
+ try{
+  const {data:{session},error:sessionError}=await client.auth.getSession();
+  if(sessionError||!session)throw Error('Sua sessão expirou. Entre novamente.');
+  const {data,error}=await client.functions.invoke('verificar-assinatura',{
+   body:{subscription_id:id},headers:{Authorization:'Bearer '+session.access_token}
+  });
+  if(error){
+   let detail=null;
+   try{detail=await error.context?.json?.()}catch{}
+   throw Error(detail?.error||'Falha ao consultar a função de verificação.');
+  }
+  if(!data?.success)throw Error(data?.error||'Não foi possível registrar a solicitação.');
+  feedback.textContent=data.message||'Solicitação registrada. Aguardando confirmação de titularidade.';
+  input.value='';await refreshSubscriptionRequests();
+ }catch(e){feedback.textContent=e.message||'Erro ao enviar a solicitação.';}
+ finally{subscriptionLinkBusy=false;$('subscription-link-submit').disabled=false;}
+});
 
 let professionalData={name:'',crefito:'',email:''};
 function profileFromUser(user){const m=user?.user_metadata||{};professionalData={name:String(m.tokids_nome_completo||'').trim(),crefito:String(m.tokids_crefito||'').trim(),email:user?.email||''};
