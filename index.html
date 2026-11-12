@@ -899,6 +899,16 @@ subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
 <input id="subscription-link-id" type="text" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Identificador da assinatura">
 <button type="button" id="subscription-link-submit">Solicitar verificação</button>
 <p id="subscription-link-feedback" role="status" aria-live="polite"></p>
+<div id="subscription-verify-step" class="history" hidden>
+<h4>Confirmar assinatura por e-mail</h4>
+<p>Enviaremos um código de seis dígitos ao e-mail confirmado da sua conta. O código expira; nunca o compartilhe.</p>
+<button type="button" id="subscription-send-code">Enviar código ao meu e-mail</button>
+<label for="subscription-code">Código recebido</label>
+<input id="subscription-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000">
+<button type="button" id="subscription-confirm-code">Confirmar código</button>
+<button type="button" id="subscription-finalize" hidden>Concluir vinculação</button>
+<p id="subscription-code-feedback" role="status" aria-live="polite"></p>
+</div>
 <p id="subscription-link-history" style="font-size:13px;color:#496b63">Nenhuma solicitação consultada.</p>
 <p style="font-size:13px;color:#795a20">A solicitação não comprova a titularidade nem ativa o plano. A liberação depende de verificação independente e aprovação segura.</p>
 </div>
@@ -919,7 +929,7 @@ $('subscribe-mp').addEventListener('click',async()=>{
   if(sessionError||!session?.access_token)throw Error('Entre novamente na sua conta antes de contratar.');
   const accepted=confirm('Você será encaminhado ao checkout hospedado do Mercado Pago. Ele NÃO vincula automaticamente o pagamento à sua conta do TO Kids PRO. Depois da contratação, será necessário solicitar a vinculação e aguardar a verificação segura. O acesso NÃO será ativado imediatamente. Deseja continuar?');
   if(!accepted){status.textContent='Operação cancelada.';return;}
-  const checkoutUrl=new URL('https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=ae5a963df63f4364bb8ef9a956fa7b88');
+  const checkoutUrl=new URL('https://mpago.la/1tf2GLp');
   status.textContent='Abrindo checkout hospedado. Após contratar, volte e solicite a vinculação da assinatura. Não utilize dados reais de pacientes enquanto a integração estiver em testes.';
   window.location.assign(checkoutUrl.href);
  }catch(e){
@@ -1011,10 +1021,86 @@ $('subscription-link-submit').addEventListener('click',async()=>{
    throw Error(detail?.error||'Falha ao consultar a função de verificação.');
   }
   if(!data?.success)throw Error(data?.error||'Não foi possível registrar a solicitação.');
-  feedback.textContent=data.message||'Solicitação registrada. Aguardando confirmação de titularidade.';
+  feedback.textContent='Assinatura localizada. Agora confirme a titularidade por e-mail.';
+  showSubscriptionVerification(id);
   input.value='';await refreshSubscriptionRequests();
  }catch(e){feedback.textContent=e.message||'Erro ao enviar a solicitação.';}
  finally{subscriptionLinkBusy=false;$('subscription-link-submit').disabled=false;}
+});
+
+// Vinculação por código: todas as decisões de titularidade são do servidor.
+let pendingSubscriptionId='', pendingVerificationId='', subscriptionVerificationBusy=false;
+async function invokeSubscriptionFunction(name,body){
+ const {data:{session},error:sessionError}=await client.auth.getSession();
+ if(sessionError||!session?.access_token)throw Error('Sua sessão expirou. Entre novamente.');
+ const {data,error}=await client.functions.invoke(name,{
+  body,headers:{Authorization:'Bearer '+session.access_token}
+ });
+ if(error){
+  let detail=null;
+  try{detail=await error.context?.json?.()}catch{}
+  throw Error(detail?.error||'Falha na comunicação com o servidor.');
+ }
+ if(!data?.success)throw Error(data?.error||'A operação não foi confirmada.');
+ return data;
+}
+function showSubscriptionVerification(id){
+ pendingSubscriptionId=id;pendingVerificationId='';
+ $('subscription-verify-step').hidden=false;
+ $('subscription-code').value='';
+ $('subscription-confirm-code').disabled=true;
+ $('subscription-finalize').hidden=true;
+ $('subscription-code-feedback').textContent='Envie o código para continuar.';
+}
+$('subscription-send-code').addEventListener('click',async()=>{
+ if(subscriptionVerificationBusy||!pendingSubscriptionId)return;
+ subscriptionVerificationBusy=true;$('subscription-send-code').disabled=true;
+ const feedback=$('subscription-code-feedback');
+ feedback.textContent='Enviando código…';
+ try{
+  const data=await invokeSubscriptionFunction('solicitar-verificacao-assinatura',{
+   subscription_id:pendingSubscriptionId
+  });
+  if(!data.verification_id)throw Error('O servidor não retornou o identificador da verificação.');
+  pendingVerificationId=data.verification_id;
+  $('subscription-confirm-code').disabled=false;
+  $('subscription-finalize').hidden=true;
+  feedback.textContent='Código enviado. Consulte seu e-mail e digite os seis números.';
+ }catch(e){feedback.textContent=e.message||'Não foi possível enviar o código.';}
+ finally{subscriptionVerificationBusy=false;$('subscription-send-code').disabled=false;}
+});
+$('subscription-confirm-code').addEventListener('click',async()=>{
+ if(subscriptionVerificationBusy||!pendingVerificationId)return;
+ const code=$('subscription-code').value.trim();
+ const feedback=$('subscription-code-feedback');
+ if(!/^\\d{6}$/.test(code)){feedback.textContent='Informe os seis dígitos do código.';return;}
+ subscriptionVerificationBusy=true;$('subscription-confirm-code').disabled=true;
+ feedback.textContent='Confirmando código…';
+ try{
+  await invokeSubscriptionFunction('confirmar-verificacao-assinatura',{
+   verification_id:pendingVerificationId,code
+  });
+  $('subscription-finalize').hidden=false;
+  feedback.textContent='Código confirmado. Clique em concluir vinculação.';
+ }catch(e){feedback.textContent=e.message||'Código não confirmado.';}
+ finally{subscriptionVerificationBusy=false;$('subscription-confirm-code').disabled=false;}
+});
+$('subscription-finalize').addEventListener('click',async()=>{
+ if(subscriptionVerificationBusy||!pendingVerificationId)return;
+ subscriptionVerificationBusy=true;$('subscription-finalize').disabled=true;
+ const feedback=$('subscription-code-feedback');
+ feedback.textContent='Registrando a assinatura…';
+ try{
+  const data=await invokeSubscriptionFunction('vincular-assinatura-confirmada',{
+   verification_id:pendingVerificationId
+  });
+  feedback.textContent=data.message||'Vinculação registrada. Aguardando sincronização financeira.';
+  $('subscription-verify-step').hidden=true;
+  pendingSubscriptionId='';pendingVerificationId='';
+  await refreshSubscriptionStatus();
+  await refreshSubscriptionRequests();
+ }catch(e){feedback.textContent=e.message||'Não foi possível concluir a vinculação.';}
+ finally{subscriptionVerificationBusy=false;$('subscription-finalize').disabled=false;}
 });
 
 let professionalData={name:'',crefito:'',email:''};
