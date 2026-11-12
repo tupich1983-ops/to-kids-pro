@@ -977,7 +977,7 @@ async function refreshSubscriptionStatus(){
   const trialDate=subscriptionDate(data.trial_ends_at);
   if(trialDate){$('subscription-trial-date').textContent='Término do período de teste registrado: '+trialDate;$('subscription-trial-date').hidden=false;}
   const renewalDate=subscriptionDate(data.current_period_ends_at);
-  if(renewalDate){$('subscription-renewal-date').textContent='Fim do período registrado: '+renewalDate;$('subscription-renewal-date').hidden=false;}
+  if(renewalDate){$('subscription-renewal-date').textContent='Próxima data informada pelo Mercado Pago (não comprova pagamento): '+renewalDate;$('subscription-renewal-date').hidden=false;}
  }catch(e){if(requestNumber===subscriptionRequestNumber){label.textContent='Consulta indisponível';detail.textContent=e.message||'Falha ao consultar a assinatura.';}}
  finally{if(requestNumber===subscriptionRequestNumber)button.disabled=false;}
 }
@@ -1073,7 +1073,7 @@ $('subscription-confirm-code').addEventListener('click',async()=>{
  if(subscriptionVerificationBusy||!pendingVerificationId)return;
  const code=$('subscription-code').value.trim();
  const feedback=$('subscription-code-feedback');
- if(!/^\\d{6}$/.test(code)){feedback.textContent='Informe os seis dígitos do código.';return;}
+ if(!/^\d{6}$/.test(code)){feedback.textContent='Informe os seis dígitos do código.';return;}
  subscriptionVerificationBusy=true;$('subscription-confirm-code').disabled=true;
  feedback.textContent='Confirmando código…';
  try{
