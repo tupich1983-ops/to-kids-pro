@@ -1347,4 +1347,42 @@ const irOriginalSelect=setSelectedPatient;
 setSelectedPatient=function(...args){const result=irOriginalSelect(...args);if(ir('ir-patient')&&patientRows.some(p=>p.id===args[0])){ir('ir-patient').value=args[0];irRender()}return result};
 irSync();
 
+
+// Correção 13: aviso de alterações clínicas não salvas.
+// Não persiste dados clínicos no navegador nem altera as chamadas Supabase.
+(function installClinicalUnsavedGuard(){
+  const areas=[
+    {name:'avaliação', root:document.getElementById('wizard'), status:document.getElementById('wizardstatus'), success:/avaliação fictícia (?:salva|atualizada)/i},
+    {name:'evolução', ids:['evo-date','evo-activities','evo-performance','evo-response','evo-status','evo-next'], status:document.getElementById('evo-message'), success:/evolução vinculada salva no supabase/i}
+  ];
+  const dirty=new Set();
+  const fields=(area)=>area.ids?area.ids.map(id=>document.getElementById(id)).filter(Boolean):area.root?Array.from(area.root.querySelectorAll('input,textarea,select')):[];
+  // O assistente de avaliação pode reconstruir os campos a cada etapa.
+  document.addEventListener('input',e=>{
+    const t=e.target;
+    if(!(t instanceof HTMLElement))return;
+    if(t.closest('#wizard')||t.closest('#wizardpanel')||t.id?.startsWith('wizard'))dirty.add('avaliação');
+    if(t.id?.startsWith('evo-'))dirty.add('evolução');
+  },true);
+  document.addEventListener('change',e=>{
+    const t=e.target;
+    if(!(t instanceof HTMLElement))return;
+    if(t.closest('#wizard')||t.closest('#wizardpanel')||t.id?.startsWith('wizard'))dirty.add('avaliação');
+    if(t.id?.startsWith('evo-') && !['evo-patient','evo-goal'].includes(t.id))dirty.add('evolução');
+  },true);
+  const watch=(id,name,re)=>{
+    const node=document.getElementById(id);
+    if(!node)return;
+    new MutationObserver(()=>{
+      if(re.test(node.textContent||''))dirty.delete(name);
+    }).observe(node,{childList:true,subtree:true,characterData:true});
+  };
+  watch('wizardstatus','avaliação',/avaliação fictícia (?:salva|atualizada)/i);
+  watch('evo-message','evolução',/evolução vinculada salva no supabase/i);
+  window.addEventListener('beforeunload',event=>{
+    if(!dirty.size)return;
+    event.preventDefault();
+    event.returnValue='';
+  });
+})();
 </script></body></html>
