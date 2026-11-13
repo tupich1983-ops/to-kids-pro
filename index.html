@@ -179,7 +179,7 @@ $('patientassessment').onclick=()=>openPage('evaluation');
 $('createrecord').onclick=async()=>{
  const paciente_id=$('recordpatient').value;
  if(!paciente_id)return msg('Cadastre um paciente fictício antes.',true);
- const {error}=await client.from('registros_clinicos').insert({paciente_id,tipo:$('recordtype').value,titulo:$('recordtitle').value.trim(),conteudo:{observacao:$('recordnote').value.trim()}});
+ const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:$('recordtype').value,titulo:$('recordtitle').value.trim(),conteudo:{observacao:$('recordnote').value.trim()}}).select('id').single();if(!error&&!saveConfirmation?.id)return msg('O Supabase não confirmou a gravação. Tente novamente após conferir o histórico.',true);
  if(error)return msg(error.message,true);
  $('recordtitle').value='';$('recordnote').value='';await refreshData();msg('Registro fictício salvo no Supabase.');
 };
@@ -187,7 +187,7 @@ $('saveeval').onclick=async()=>{
  const paciente_id=$('evalpatient').value;
  if(!paciente_id)return msg('Cadastre um paciente fictício primeiro.',true);
  const dados={formato:'avaliacao_estruturada_v1',data:$('evaldate').value,demanda:$('evaldemand').value.trim(),observacoes:$('evalnotes').value.trim(),dominios:domains.map((dominio,i)=>({dominio,nivel:$('domain'+i).value}))};
- const {error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação infantil estruturada — teste',conteudo:dados});
+ const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação infantil estruturada — teste',conteudo:dados}).select('id').single();if(!error&&!saveConfirmation?.id)return msg('O Supabase não confirmou a gravação. Tente novamente após conferir o histórico.',true);
  if(error)return msg('Falha ao salvar avaliação: '+error.message,true);
  await refreshData();msg('Avaliação fictícia salva no Supabase.');
 };
@@ -297,7 +297,7 @@ $('wizardfinish').onclick=async()=>{
    const {data,error}=await client.from('registros_clinicos').update({conteudo}).eq('id',wizardEditingId).eq('paciente_id',paciente_id).select('id');
    if(error)throw error;if(!data?.length)throw Error('A atualização não foi confirmada. Verifique as permissões de edição (RLS).');
   }else{
-   const {error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação pediátrica completa — 6.5',conteudo:{formato:'tokids_avaliacao_completa_v1',versao:1,data:new Date().toISOString().slice(0,10),etapas}});
+   const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação pediátrica completa — 6.5',conteudo:{formato:'tokids_avaliacao_completa_v1',versao:1,data:new Date().toISOString().slice(0,10),etapas}}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
    if(error)throw error;
   }
   const edited=!!wizardEditingId;
@@ -331,7 +331,7 @@ function renderModuleHistory(){const area=$('modulehistory');area.replaceChildre
 $('modulepatient').onchange=renderModuleHistory;typeSelect.onchange=renderModuleForm;renderModuleForm();
 $('clearform').onclick=renderModuleForm;
 $('savemodule').onclick=async()=>{const paciente_id=$('modulepatient').value;if(!paciente_id)return msg('Cadastre um paciente fictício primeiro.',true);const module=typeSelect.value,schema=moduleSchemas[module],campos={};for(const [key] of schema.fields)campos[key]=$('m_'+key).value.trim();if(!Object.values(campos).some(Boolean))return msg('Preencha ao menos um campo.',true);
- const conteudo={formato:'tokids_modulo_v1',versao:1,modulo:module,data:$('m_date').value,campos};const {error}=await client.from('registros_clinicos').insert({paciente_id,tipo:schema.type,titulo:schema.title,conteudo});if(error)return msg('Erro ao salvar: '+error.message,true);await refreshData();msg('Módulo fictício salvo no Supabase.');};
+ const conteudo={formato:'tokids_modulo_v1',versao:1,modulo:module,data:$('m_date').value,campos};const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:schema.type,titulo:schema.title,conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)return msg('Erro ao salvar: '+error.message,true);await refreshData();msg('Módulo fictício salvo no Supabase.');};
 $('printreport').onclick=()=>{const pid=$('modulepatient').value,p=patientRows.find(x=>x.id===pid);if(!p)return msg('Selecione um paciente.',true);const recs=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_modulo_v1');if(!recs.length)return msg('Não há módulos integrados para imprimir.',true);
  const w=window.open('','_blank');if(!w)return msg('Permita a abertura de janela para imprimir.',true);const doc=w.document;doc.title='Relatório fictício - TO Kids PRO';const style=doc.createElement('style');style.textContent='body{font:14px Arial;max-width:800px;margin:40px auto;line-height:1.5}section{page-break-inside:avoid;margin:24px 0}h1{color:#164b4c}small{color:#666}';doc.head.append(style);const h=doc.createElement('h1');h.textContent='TO Kids PRO — Relatório de teste';doc.body.append(h);const warn=doc.createElement('p');warn.textContent='DOCUMENTO FICTÍCIO — NÃO UTILIZAR COMO LAUDO OU PRONTUÁRIO REAL';doc.body.append(warn);const name=doc.createElement('p');name.textContent='Código do paciente: '+p.nome;doc.body.append(name);
  for(const r of recs){const sec=doc.createElement('section'),title=doc.createElement('h2');title.textContent=r.titulo+' — '+clean(r.conteudo.data);sec.append(title);for(const [k,v] of Object.entries(r.conteudo.campos||{})){if(!v)continue;const para=doc.createElement('p');const label=moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;para.textContent=label+': '+v;sec.append(para)}doc.body.append(sec)}w.focus();w.print()};
@@ -801,7 +801,7 @@ function ptoiRender(){
    if(!measure.value.trim()&&!obs.value.trim())return ptoiStatus('Descreva uma medida ou observação para registrar.',true);
    save.disabled=true;try{
     const conteudo={formato:'tokids_ptoi_acompanhamento_v1',versao:1,meta_id:d.meta_id,data:date.value,estado:state.value,medida:measure.value.trim(),observacao:obs.value.trim()};
-    const {error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — acompanhamento de meta',conteudo});
+    const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — acompanhamento de meta',conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
     if(error)throw error;await refreshData();ptoiStatus('Acompanhamento salvo no Supabase.')
    }catch(e){ptoiStatus('Falha ao salvar acompanhamento: '+e.message,true)}finally{save.disabled=false}
   };card.append(save);list.append(card)
@@ -817,7 +817,7 @@ ptoi$('ptoi-save').onclick=async()=>{
  try{
   const metaId=crypto.randomUUID();
   const conteudo={formato:'tokids_ptoi_meta_v1',versao:1,meta_id:metaId,prazo:ptoi$('ptoi-period').value,area:ptoi$('ptoi-domain').value,revisao:ptoi$('ptoi-targetdate').value,meta,linha_base:baseline,criterio:criterion,estrategias:ptoi$('ptoi-strategy').value.trim()};
-  const {error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — '+conteudo.prazo+' — '+conteudo.area,conteudo});
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — '+conteudo.prazo+' — '+conteudo.area,conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
   if(error)throw error;
   for(const id of ['ptoi-goal','ptoi-baseline','ptoi-criterion','ptoi-strategy','ptoi-targetdate'])ptoi$(id).value='';
   await refreshData();ptoiStatus('Meta salva no Supabase. Você já pode registrar o acompanhamento.')
@@ -917,7 +917,7 @@ evo$('evo-save').onclick=async()=>{
  const btn=evo$('evo-save');btn.disabled=true;
  try{
   const conteudo={formato:'tokids_evolucao_ptoi_v1',versao:1,meta_id:metaId,data:evo$('evo-date').value,atividades:evo$('evo-activities').value.trim(),medida:measure,resposta:evo$('evo-response').value.trim(),estado:evo$('evo-status').value,proximos:evo$('evo-next').value.trim()};
-  const {error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Evolução vinculada ao PTOI',conteudo});if(error)throw error;
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Evolução vinculada ao PTOI',conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)throw error;
   for(const id of ['evo-activities','evo-performance','evo-response','evo-next'])evo$(id).value='';
   await refreshData();message.textContent='Evolução vinculada salva no Supabase.';
  }catch(e){message.textContent='Falha ao salvar evolução: '+e.message}finally{btn.disabled=false}
@@ -1332,7 +1332,7 @@ function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren()
 ir('ir-patient').onchange=irRender;
 ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
 ir('ir-refresh').onclick=async()=>{await refreshData();ir('ir-status').textContent='Dados atualizados do Supabase.'};
-ir('ir-save').onclick=async()=>{const pid=ir('ir-patient').value,observacoes=ir('ir-notes').value.trim();if(!client||!pid||!observacoes){ir('ir-status').textContent='Selecione um paciente e preencha as observações fictícias.';return}const btn=ir('ir-save');btn.disabled=true;try{const {error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Observações do relatório integrado',conteudo:{formato:irFormats.notes,versao:1,data:new Date().toISOString().slice(0,10),observacoes}});if(error)throw error;await refreshData();ir('ir-status').textContent='Observações salvas no Supabase. As versões anteriores foram preservadas.'}catch(e){ir('ir-status').textContent='Erro ao salvar observações: '+e.message}finally{btn.disabled=false}};
+ir('ir-save').onclick=async()=>{const pid=ir('ir-patient').value,observacoes=ir('ir-notes').value.trim();if(!client||!pid||!observacoes){ir('ir-status').textContent='Selecione um paciente e preencha as observações fictícias.';return}const btn=ir('ir-save');btn.disabled=true;try{const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Observações do relatório integrado',conteudo:{formato:irFormats.notes,versao:1,data:new Date().toISOString().slice(0,10),observacoes}}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)throw error;await refreshData();ir('ir-status').textContent='Observações salvas no Supabase. As versões anteriores foram preservadas.'}catch(e){ir('ir-status').textContent='Erro ao salvar observações: '+e.message}finally{btn.disabled=false}};
 ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid);
  if(!p){ir('ir-status').textContent='Selecione um paciente fictício.';return}
  if(!professionalData.name||!professionalData.crefito){ir('ir-status').textContent='Antes de imprimir, preencha seu nome e CREFITO em Meu Perfil.';return}
@@ -1384,5 +1384,24 @@ irSync();
     event.preventDefault();
     event.returnValue='';
   });
+})();
+
+// Correção 14: bloqueia tentativas de gravação sem conexão aparente.
+// Confirmação real de gravação é exigida via INSERT ... RETURNING id.
+(function installClinicalSaveConnectionGuard(){
+ const ids=['createrecord','saveeval','wizardfinish','savemodule','ptoi-save','evo-save','ir-save'];
+ document.addEventListener('click',event=>{
+   const button=event.target?.closest?.('button');
+   if(!button||!ids.includes(button.id)||navigator.onLine!==false)return;
+   event.preventDefault();event.stopImmediatePropagation();
+   const message='Sem conexão com a internet. Nenhum registro foi enviado. Mantenha esta página aberta e tente salvar novamente quando a conexão voltar.';
+   const target=button.id==='wizardfinish'?document.getElementById('wizardstatus'):
+     button.id==='evo-save'?document.getElementById('evo-message'):
+     button.id==='ir-save'?document.getElementById('ir-status'):
+     button.id==='ptoi-save'?document.getElementById('ptoi-status'):
+     document.getElementById('status');
+   if(target)target.textContent=message;
+   else alert(message);
+ },true);
 })();
 </script></body></html>
