@@ -68,6 +68,26 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 </section></main><script type="module">
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const $=id=>document.getElementById(id);let client=null,patientRows=[],allRecords=[],selectedPatientId=null;
+// Correção 12: geração da sessão para impedir respostas antigas na interface.
+let clinicalSessionOwner=null, clinicalSessionEpoch=0, clinicalLoadSerial=0;
+function clinicalClearView(){
+ patientRows=[];allRecords=[];selectedPatientId=null;
+ for(const id of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient','recordlist','evallist','modulehistory','wizardhistory']){
+  const el=$(id);if(el)el.replaceChildren();
+ }
+ for(const id of ['recordtitle','recordnote','evaldemand','evalnotes','subscription-link-id','subscription-link-feedback','prof-name','prof-crefito','prof-email','prof-status']){
+  const el=$(id);if(el && 'value' in el)el.value='';else if(el)el.textContent='';
+ }
+ for(const id of ['activepatientbar','resourcepatient','who','subscription-link-history']){
+  const el=$(id);if(el)el.textContent='';
+ }
+ const frame=$('frame');if(frame)frame.removeAttribute('src');
+ if(typeof legacyContextObserver!=='undefined' && legacyContextObserver){legacyContextObserver.disconnect();legacyContextObserver=null;legacyContextDoc=null;}
+ wizardClearDrafts();
+}
+function clinicalInvalidate(){clinicalSessionEpoch++;clinicalLoadSerial++;clinicalSessionOwner=null;clinicalClearView();}
+function clinicalSessionMatches(owner,epoch){return clinicalSessionOwner===owner && clinicalSessionEpoch===epoch;}
+
 const domains=['Participação em AVDs','Motricidade global','Motricidade fina','Processamento sensorial','Comunicação funcional','Brincar e interação','Cognição e planejamento','Participação escolar'];
 const levels=[['nao_avaliado','Não avaliado'],['autonomo','Participa sem ajuda'],['apoio_parcial','Participa com apoio'],['apoio_intenso','Necessita apoio intenso'],['nao_observado','Não observado']];
 for(let i=0;i<domains.length;i++){const wrap=document.createElement('div');const lab=document.createElement('label');lab.textContent=domains[i];wrap.append(lab);const sel=document.createElement('select');sel.id='domain'+i;for(const [v,t] of levels){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o)}wrap.append(sel);$('evaldomains').append(wrap)}
@@ -113,9 +133,11 @@ function renderPatientProfile(){
  for(const [label,value] of [['Motricidade e exploração',band.motor],['Comunicação e brincar',band.communication],['Alimentação',band.feeding]]){const para=document.createElement('p');const strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));area.append(para)}
 }
 async function refreshData(){
- if(!client)return;
- const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user)return;
+ if(!client||!clinicalSessionOwner)return;
+ const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch,serial=++clinicalLoadSerial;
+ const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user||user.id!==owner||!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
  const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,data_nascimento,criado_em').order('criado_em',{ascending:false});
+ if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
  if(pe){msg('Erro ao carregar pacientes: '+pe.message,true);return}
  patientRows=pts||[];
  for(const name of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient'])$(name).replaceChildren();
@@ -124,6 +146,7 @@ async function refreshData(){
   for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;$(name).append(o)}
  }
  const {data:rs,error:re}=await client.from('registros_clinicos').select('id,paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
+ if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
  if(re){msg('Erro ao carregar registros: '+re.message,true);return}
  allRecords=rs||[];
  if(!patientRows.some(p=>p.id===selectedPatientId))selectedPatientId=patientRows[0]?.id||null;
@@ -392,7 +415,30 @@ $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('librar
 
 $('refresh').onclick=refreshData;
 function msg(t,error=false){$('status').textContent=t;$('status').className=error?'err':''}
-async function display(session){if(session){wizardSetOwner(session.user.id);profileFromUser(session.user);void loadProfessionalProfile();void refreshSubscriptionStatus();void refreshSubscriptionRequests();$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{wizardClearDrafts();$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src');resetSubscriptionStatus()}}
+async function display(session){
+ const owner=session?.user?.id||null;
+ if(!owner){
+  clinicalInvalidate();
+  $('gate').hidden=false;$('app').hidden=true;
+  resetSubscriptionStatus();
+  return;
+ }
+ if(clinicalSessionOwner!==owner){
+  clinicalInvalidate();
+  clinicalSessionOwner=owner;
+ }
+ const epoch=clinicalSessionEpoch;
+ wizardSetOwner(owner);
+ profileFromUser(session.user);
+ $('gate').hidden=true;$('app').hidden=false;
+ $('who').textContent=session.user.email||'';
+ if(!$('frame').getAttribute('src'))$('frame').src='painel.html';
+ void loadProfessionalProfile();
+ void refreshSubscriptionStatus();
+ void refreshSubscriptionRequests();
+ await refreshData();
+ if(clinicalSessionMatches(owner,epoch))wizardSwitch();
+}
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
 // Fluxo oficial Supabase Auth: solicita link, valida a sessão de recuperação e troca a senha.
@@ -441,6 +487,7 @@ const PUBLIC_SUPABASE_KEY='sb_publishable_48CcbW0k2JLgL8HnplJiaA_GW3Q43b-';
    client.auth.onAuthStateChange((event,session)=>{
      if(event==='PASSWORD_RECOVERY')enterRecoveryMode();
      // Não abrir o prontuário automaticamente durante a redefinição de senha.
+     if(event==='SIGNED_OUT'){void display(null);return;}
      if(event==='SIGNED_IN' && !recoveryMode && !recoveryFromUrl && session)void display(session);
    });
    const {data:{session},error}=await client.auth.getSession();
@@ -1023,18 +1070,21 @@ $('subscription-refresh').addEventListener('click',async()=>{await refreshSubscr
 // Solicitação de vínculo: apenas o backend pode criar pedidos, e nenhum pedido libera acesso.
 let subscriptionLinkBusy=false;
 async function refreshSubscriptionRequests(){
+ const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
  const output=$('subscription-link-history');
  if(!output||!client)return;
  try{
   const {data:{user},error:authError}=await client.auth.getUser();
-  if(authError||!user){output.textContent='Entre na sua conta para consultar suas solicitações.';return;}
+  if(!clinicalSessionMatches(owner,epoch))return;
+  if(authError||!user||user.id!==owner){output.textContent='Entre na sua conta para consultar suas solicitações.';return;}
   const {data,error}=await client.from('solicitacoes_vinculacao')
    .select('status,created_at').eq('terapeuta_id',user.id)
    .order('created_at',{ascending:false}).limit(5);
+  if(!clinicalSessionMatches(owner,epoch))return;
   if(error)throw error;
   const names={aguardando_verificacao:'Aguardando verificação',em_analise:'Em análise',aprovada:'Aprovada (sujeita à confirmação da assinatura)',rejeitada:'Rejeitada'};
   output.textContent=data?.length?'Solicitações: '+data.map(x=>(names[x.status]||'Em verificação')+' — '+new Date(x.created_at).toLocaleDateString('pt-BR')).join(' | '):'Nenhuma solicitação registrada nesta conta.';
- }catch(e){output.textContent='Não foi possível consultar as solicitações. Verifique a conexão.';}
+ }catch(e){if(clinicalSessionMatches(owner,epoch))output.textContent='Não foi possível consultar as solicitações. Verifique a conexão.';}
 }
 $('subscription-link-submit').addEventListener('click',async()=>{
  if(subscriptionLinkBusy||!client)return;
@@ -1144,7 +1194,7 @@ let professionalData={name:'',crefito:'',email:''};
 function profileFromUser(user){const m=user?.user_metadata||{};professionalData={name:String(m.tokids_nome_completo||'').trim(),crefito:String(m.tokids_crefito||'').trim(),email:user?.email||''};
  document.getElementById('prof-name').value=professionalData.name;document.getElementById('prof-crefito').value=professionalData.crefito;document.getElementById('prof-email').value=professionalData.email;
 }
-async function loadProfessionalProfile(){if(!client)return;const {data,error}=await client.auth.getUser();if(error||!data?.user)return;profileFromUser(data.user)}
+async function loadProfessionalProfile(){if(!client)return;const {data,error}=await client.auth.getUser();if(error||!data?.user||data.user.id!==clinicalSessionOwner)return;profileFromUser(data.user)}
 document.getElementById('prof-save').onclick=async()=>{const name=document.getElementById('prof-name').value.trim().replace(/\s+/g,' '),crefito=document.getElementById('prof-crefito').value.trim();const status=document.getElementById('prof-status');
  if(name.length<5){status.textContent='Informe seu nome completo (ao menos cinco caracteres).';return}
  const btn=document.getElementById('prof-save');btn.disabled=true;
