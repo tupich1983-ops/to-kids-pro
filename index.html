@@ -1392,6 +1392,25 @@ irSync();
   };
   watch('wizardstatus','avaliação',/avaliação fictícia (?:salva|atualizada)/i);
   watch('evo-message','evolução',/evolução vinculada salva no supabase/i);
+  // Correção 16: proteger também a navegação interna entre módulos.
+  // A confirmação não substitui o salvamento no Supabase.
+  document.addEventListener('click',event=>{
+    const target=event.target;
+    if(!(target instanceof Element)||!dirty.size)return;
+    const navigation=target.closest('button[data-page],#homebutton');
+    if(!navigation)return;
+    const destination=navigation.getAttribute('data-page');
+    const active=document.querySelector('.dashboard-tile.active');
+    if(destination && active===navigation)return;
+    const names=[...dirty].join(' e ');
+    const leave=window.confirm('Existem alterações não salvas em '+names+'. Se você continuar, essas alterações poderão ser perdidas. Deseja sair sem salvar?');
+    if(!leave){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+    dirty.clear();
+  },true);
   window.addEventListener('beforeunload',event=>{
     if(!dirty.size)return;
     event.preventDefault();
