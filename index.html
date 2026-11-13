@@ -1180,6 +1180,30 @@ function ptoiRender(){
     const dateA=String(a.conteudo?.data||'');const dateB=String(b.conteudo?.data||'');
     return dateB.localeCompare(dateA)||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0);
    });
+  // Correção 36: síntese descritiva e somente leitura do acompanhamento por meta.
+  // Contagens e datas são dados observados, não interpretação de melhora clínica.
+  const evolutionEvents=events.filter(r=>r.conteudo?.formato==='tokids_evolucao_ptoi_v1');
+  const trackingEvents=events.filter(r=>r.conteudo?.formato==='tokids_ptoi_acompanhamento_v1');
+  const summary=ptoiElement('section');summary.className='history ptoi-progress-summary';
+  summary.style.cssText='margin:12px 0;padding:12px;background:#f8fcfa;border:1px solid #b7d9d0;border-radius:10px';
+  summary.append(ptoiElement('h4','Síntese do acompanhamento da meta'));
+  summary.append(ptoiElement('p',events.length+' registro(s) vinculado(s): '+evolutionEvents.length+' evolução(ões) clínica(s) e '+trackingEvents.length+' acompanhamento(s).','ptoi-note'));
+  if(events.length){
+   const recent=events[0],data=String(recent.conteudo?.data||'');
+   const formatted=/^\d{4}-\d{2}-\d{2}$/.test(data)?ptoiDate(data):'Data da sessão não informada';
+   const type=recent.conteudo.formato==='tokids_evolucao_ptoi_v1'?'Evolução clínica':'Acompanhamento da meta';
+   summary.append(ptoiElement('p','Registro mais recente: '+formatted+' · '+type));
+   const recentFields=recent.conteudo.formato==='tokids_evolucao_ptoi_v1'?
+    [['Situação registrada',recent.conteudo.estado],['Desempenho funcional',recent.conteudo.medida],['Resposta observada',recent.conteudo.resposta],['Próximos passos',recent.conteudo.proximos]]:
+    [['Situação registrada',recent.conteudo.estado],['Medida observada',recent.conteudo.medida],['Observação',recent.conteudo.observacao]];
+   for(const [label,value] of recentFields){
+    if(!ptoiSafe(value))continue;
+    const line=ptoiElement('p');line.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0';
+    line.append(ptoiElement('strong',label+': '),document.createTextNode(ptoiSafe(value)));summary.append(line);
+   }
+  }else summary.append(ptoiElement('p','Ainda não há registros de acompanhamento ou evolução vinculados a esta meta.'));
+  summary.append(ptoiElement('p','Resumo descritivo dos registros existentes; não determina automaticamente progresso, alcance ou regressão.','ptoi-note'));
+  card.append(summary);
   const timeline=ptoiElement('details');timeline.className='history ptoi-timeline';
   timeline.style.cssText='margin:12px 0;padding:12px;background:#f4faf8;border:1px solid #c8e1dc;border-radius:10px';
   timeline.append(ptoiElement('summary','Linha do tempo clínica — '+events.length+' registro(s)'));
