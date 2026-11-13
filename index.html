@@ -780,6 +780,12 @@ function tkInitCatalog(){
  <label>Faixa etária<select id="tk-age"><option value="all">Todas as idades</option>${tkAgeNames.map((x,i)=>`<option value="${i}">${x}</option>`).join('')}</select></label>
  <label>Área<select id="tk-area"><option value="all">Todas as áreas</option>${[...new Set(tkClinicalActivities.map(x=>x.area))].map(x=>`<option>${x}</option>`).join('')}</select></label>
  <label>Pesquisar<input id="tk-search" placeholder="Ex.: memória, higiene, planejamento"></label></div>
+ <section id="tk-eval-guidance" class="history" aria-live="polite" style="background:#f2faf7">
+ <strong>Sugestões orientadas pela avaliação</strong>
+ <p id="tk-eval-guidance-status" style="font-size:13px"></p>
+ <div id="tk-eval-guidance-actions" class="quicktools"></div>
+ <p style="font-size:12px">Apoio à consulta, sem diagnóstico, prescrição ou salvamento automático. Os achados devem ser interpretados pelo terapeuta.</p>
+ </section>
  <p id="tk-count" role="status"></p>
  <div style="padding:12px;border:1px solid #9ac9bf;border-radius:10px;margin:10px 0;background:#eff8f5">
  <strong>Selecionar atividades para a sessão</strong>
@@ -852,9 +858,67 @@ function tkEvidenceFor(x){
  const g=tkEvidenceGuides[x.area]||tkEvidenceGuides['Motricidade'];
  return [['Foco do raciocínio clínico',g.focus],['Meta funcional sugerida',g.goal],['Como acompanhar a evolução',g.measure],['Cuidados e contraindicações gerais',g.care],['Fundamentação conceitual',g.basis]];
 }
+// Correção 32 — Fase 2: sugestões transparentes por domínios estruturados.
+const tkDomainToArea={
+ 'Participação em AVDs':'AVDs',
+ 'Motricidade global':'Motricidade',
+ 'Motricidade fina':'Motricidade',
+ 'Processamento sensorial':'Sensorial',
+ 'Comunicação funcional':'Brincar',
+ 'Brincar e interação':'Brincar',
+ 'Cognição e planejamento':'Cognição',
+ 'Participação escolar':'Cognição'
+};
+function tkPatientAgeCategory(p){
+ const m=monthsOld(p);
+ if(m===null)return 'all';
+ return String(m<=5?0:m<=11?1:m<=23?2:m<=35?3:m<=71?4:m<=107?5:6);
+}
+function tkRenderEvaluationGuidance(p){
+ const status=$('tk-eval-guidance-status'),actions=$('tk-eval-guidance-actions');
+ if(!status||!actions)return;
+ actions.replaceChildren();
+ if(!p){status.textContent='Selecione um paciente fictício para consultar os achados da avaliação.';return;}
+ const assessments=allRecords.filter(r=>r.paciente_id===p.id &&
+  r.tipo==='avaliacao'&&r.conteudo?.formato==='avaliacao_estruturada_v1')
+  .sort((a,b)=>Date.parse(b.criado_em||'')-Date.parse(a.criado_em||''));
+ const assessment=assessments[0];
+ if(!assessment){
+  status.textContent='Não há avaliação estruturada com níveis funcionais para este paciente. Utilize os filtros manuais; avaliações narrativas não são interpretadas automaticamente.';
+  return;
+ }
+ const domains=(assessment.conteudo.dominios||[]).filter(d=>
+  ['apoio_parcial','apoio_intenso'].includes(d.nivel)&&tkDomainToArea[d.dominio]);
+ const areas=[...new Set(domains.map(d=>tkDomainToArea[d.dominio]))];
+ if(!areas.length){
+  status.textContent='A avaliação estruturada mais recente não contém domínios assinalados com necessidade de apoio. Consulte o catálogo manualmente.';
+  return;
+ }
+ status.textContent='Com base nos domínios marcados como “Participa com apoio” ou “Necessita apoio intenso” na avaliação estruturada mais recente, consulte estas áreas. Não há inferência a partir de diagnóstico ou texto livre:';
+ for(const area of areas){
+  const button=document.createElement('button');button.type='button';button.className='secondary';
+  const linked=domains.filter(d=>tkDomainToArea[d.dominio]===area).map(d=>d.dominio);
+  button.textContent='Ver '+area+' ('+linked.join(', ')+')';
+  button.onclick=()=>{
+   $('tk-area').value=area;
+   $('tk-age').value=tkPatientAgeCategory(p);
+   tkRenderCatalog();
+  };
+  actions.append(button);
+ }
+ const clear=document.createElement('button');clear.type='button';clear.className='secondary';
+ clear.textContent='Ver todas as áreas';clear.onclick=()=>{
+  $('tk-area').value='all';$('tk-age').value='all';tkRenderCatalog();
+ };
+ actions.append(clear);
+}
 function tkRenderCatalog(){
  const age=$('tk-age').value,area=$('tk-area').value,q=$('tk-search').value.trim().toLocaleLowerCase('pt-BR');
  const p=patientRows.find(x=>x.id===selectedPatientId);
+ const guidanceKey=(p?.id||'')+'|'+allRecords.filter(r=>r.paciente_id===p?.id&&r.tipo==='avaliacao'&&r.conteudo?.formato==='avaliacao_estruturada_v1').map(r=>r.id+':'+r.criado_em).join(',');
+ if($('tk-eval-guidance')?.dataset.key!==guidanceKey){
+  $('tk-eval-guidance').dataset.key=guidanceKey;tkRenderEvaluationGuidance(p);
+ }
  $('tk-catalog-patient').textContent=p?'Paciente ativo: '+p.nome+' • '+ageLabel(p)+' • '+(p.dados?.diagnostico||'Diagnóstico não informado')+'. A idade do filtro é independente do prontuário.':'Nenhum paciente ativo; consulta geral disponível.';
  const selected=tkPendingActivities.get(p?.id)||[];
  $('tk-selected-count').textContent=selected.length?selected.length+' atividade(s) selecionada(s): '+selected.map(x=>x.title).join('; '):'Nenhuma atividade selecionada.';
