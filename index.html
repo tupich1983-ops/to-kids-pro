@@ -1812,6 +1812,9 @@ function ir44RecordDate(r){const raw=String(r?.conteudo?.data||r?.criado_em||'')
 function ir44Records(records,settings){return records.filter(r=>{const date=ir44RecordDate(r);return (!settings.from||(date&&date>=settings.from))&&(!settings.to||(date&&date<=settings.to))})}
 function ir44Validate(){const s=ir44Settings(),feedback=document.getElementById('ir44-feedback');if(s.from&&s.to&&s.from>s.to){feedback.textContent='A data inicial não pode ser posterior à data final.';return false}feedback.textContent='Prévia atualizada. Os filtros não alteram registros salvos.';return true}
 const ir=id=>document.getElementById(id);
+const ir46Warning=document.createElement('p');ir46Warning.id='ir46-warning';ir46Warning.className='ir-review-note';ir46Warning.setAttribute('role','status');
+integratedReport.insertBefore(ir46Warning,document.getElementById('ir-preview'));
+
 const report43Style=document.createElement('style');
 report43Style.textContent='#ir-preview .ir-report-review{margin:8px 0;padding:9px 12px;border-left:3px solid #72aa9c;background:#f4faf8;border-radius:4px}#ir-preview .ir-report-review p{margin:4px 0}';
 report43Style.textContent+='#ir-preview .ir-document-head{border:1px solid #cbded8;border-radius:8px;padding:12px 14px;background:#f8fcfa;margin:12px 0}#ir-preview .ir-document-head>strong{display:block;color:#155c52;margin-bottom:7px}#ir-preview .ir-document-head p{margin:4px 0}';
@@ -1889,6 +1892,27 @@ function irPatientRecords(){
  return allRecords.filter(r=>r.paciente_id===pid);
 }
 function irLatestNotes(records){return records.find(r=>r.conteudo?.formato===irFormats.notes)?.conteudo?.observacoes||''}
+// Correção 46 — validação de identidade e estado de carregamento do relatório.
+let ir46DataReady=true,ir46NotesPatient=null,ir46NotesDirty=false;
+function ir46Patient(){const pid=ir('ir-patient')?.value||'';return patientRows.find(p=>p.id===pid)||null}
+function ir46Status(message){ir('ir-status').textContent=message}
+function ir46Ready(){
+ const p=ir46Patient();
+ if(!client||!clinicalSessionOwner||!ir46DataReady||!p){ir46Status('Relatório indisponível: confirme a sessão, selecione um paciente válido e atualize os dados.');return null}
+ if(!ir44Validate()){ir46Status('Corrija o período do relatório antes de continuar.');return null}
+ return p;
+}
+function ir46Notice(records){
+ const box=ir('ir46-warning');if(!box)return;
+ const p=ir46Patient();
+ if(!p){box.textContent='Nenhum paciente válido selecionado. Não é possível emitir o relatório.';return}
+ const filtered=ir44Records(records,ir44Settings());
+ const clinical=filtered.filter(r=>r.conteudo?.formato!==irFormats.notes);
+ box.textContent=!ir46DataReady?'Não foi possível confirmar a atualização dos dados. Atualize antes de imprimir.':
+ !clinical.length?'Atenção: não há registros clínicos no período escolhido. A impressão ficará bloqueada até haver registros correspondentes.':
+ !ir('ir-notes').value.trim()?'A conclusão profissional está vazia. Se imprimir, o documento indicará que não foi informada.':'Prévia vinculada exclusivamente ao paciente selecionado.';
+}
+
 function irBuild(target,records,patient,notes,settings=ir44Settings()){
  target.replaceChildren();
  records=ir44Records(records,settings);
@@ -2131,18 +2155,42 @@ function comparison42Render(){
 for(const input of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])input.addEventListener('change',comparison42Render);
 comparison42Clear.onclick=()=>{for(const el of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])el.value='';comparison42Render()};
 
-function irRender(){if(!ir44Validate())return;const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render();comparison42Render()}
+function irRender(){
+ const p=ir46Patient(),pid=p?.id||null,records=p?irPatientRecords():[];
+ if(ir46NotesPatient!==pid){ir46NotesPatient=pid;ir46NotesDirty=false;ir('ir-notes').value=p?irLatestNotes(records):''}
+ else if(!ir46NotesDirty)ir('ir-notes').value=p?irLatestNotes(records):'';
+ if(!ir44Validate()){ir('ir-preview').replaceChildren();ir46Notice(records);return}
+ irBuild(ir('ir-preview'),records,p,ir('ir-notes').value);
+ ir46Notice(records);results40Render();timeline41Render();comparison42Render();
+}
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
-for(const el of ir44.querySelectorAll('input'))el.addEventListener('change',()=>{if(ir44Validate())irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
-ir44.querySelector('#ir44-clear').onclick=()=>{document.getElementById('ir44-from').value='';document.getElementById('ir44-to').value='';ir44Validate();irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)};
+for(const el of ir44.querySelectorAll('input'))el.addEventListener('change',irRender);
+ir44.querySelector('#ir44-clear').onclick=()=>{document.getElementById('ir44-from').value='';document.getElementById('ir44-to').value='';irRender()};
 ir('ir-patient').onchange=irRender;
-ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
-ir('ir-refresh').onclick=async()=>{await refreshData();ir('ir-status').textContent='Dados atualizados do Supabase.'};
-ir('ir-save').onclick=async()=>{const pid=ir('ir-patient').value,observacoes=ir('ir-notes').value.trim();if(!client||!pid||!observacoes){ir('ir-status').textContent='Selecione um paciente e preencha as observações fictícias.';return}const btn=ir('ir-save');btn.disabled=true;try{const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Observações do relatório integrado',conteudo:{formato:irFormats.notes,versao:1,data:new Date().toISOString().slice(0,10),observacoes}}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)throw error;await refreshData();ir('ir-status').textContent='Observações salvas no Supabase. As versões anteriores foram preservadas.'}catch(e){ir('ir-status').textContent='Erro ao salvar observações: '+e.message}finally{btn.disabled=false}};
+ir('ir-notes').addEventListener('input',()=>{ir46NotesDirty=true;irRender()});
+ir('ir-refresh').onclick=async()=>{const ok=await refreshData();ir46DataReady=!!ok;irRender();ir46Status(ok?'Dados atualizados e conferidos no Supabase.':'Não foi possível confirmar a atualização. A impressão foi bloqueada; tente novamente.')};
+ir('ir-save').onclick=async()=>{
+ const p=ir46Ready(),observacoes=ir('ir-notes').value.trim();if(!p||!observacoes){if(p)ir46Status('Preencha as observações fictícias antes de salvar.');return}
+ const pid=p.id,owner=clinicalSessionOwner,epoch=clinicalSessionEpoch,btn=ir('ir-save');if(btn.disabled)return;btn.disabled=true;
+ try{
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Observações do relatório integrado',conteudo:{formato:irFormats.notes,versao:1,data:new Date().toISOString().slice(0,10),observacoes}}).select('id').single();
+  if(error)throw error;if(!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
+  if(!clinicalSessionMatches(owner,epoch)){ir46Status('Observações gravadas, mas a sessão mudou. Entre novamente e confira o histórico.');return}
+  ir46NotesDirty=false;const ok=await refreshData();ir46DataReady=!!ok;
+  ir46Status(ok?'Observações salvas no Supabase. Versões anteriores preservadas.':'Observações salvas, mas a atualização falhou. Não salve novamente; tente Atualizar dados.');
+ }catch(e){ir46Status('Não foi possível confirmar o salvamento: '+e.message+' Confira o histórico antes de repetir.')}
+ finally{btn.disabled=false}
+};
 ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid);
  if(!p||!pid||!patientRows.some(x=>x.id===pid)){ir('ir-status').textContent='Selecione um paciente fictício válido.';return}
  if(!professionalData.name||!professionalData.crefito){ir('ir-status').textContent='Antes de imprimir, preencha seu nome e CREFITO em Meu Perfil.';return}
- if(!ir44Validate()){ir('ir-status').textContent='Corrija o período selecionado antes de imprimir.';return}
+ if(!ir46Ready())return;
+ const records=irPatientRecords(),settings=ir44Settings(),filtered=ir44Records(records,settings);
+ if(!Object.values(settings.sections).some(Boolean)){ir46Status('Selecione ao menos uma seção para imprimir.');return}
+ if(!filtered.some(r=>r.conteudo?.formato!==irFormats.notes)){ir46Status('Impressão bloqueada: não há registros clínicos para este paciente no período selecionado.');return}
+ const patientCode=p.nome,period=(settings.from||'início')+' a '+(settings.to||'hoje');
+ if(!window.confirm('Confirmar emissão do relatório fictício?\nPaciente: '+patientCode+'\nPeríodo: '+period+'\nRegistros no período: '+filtered.length+'\n\nVerifique a prévia e confirme que a conclusão é de sua autoria.')){ir46Status('Impressão cancelada para conferência.');return}
+
  const w=window.open('','_blank');if(!w){ir('ir-status').textContent='Permita janelas pop-up para imprimir.';return}
  const d=w.document;d.title='Relatório de evolução terapêutica — TO Kids PRO';
  const st=d.createElement('style');st.textContent=`.ir-report-review{padding:9px 12px;margin:8px 0;border-left:3px solid #72aa9c;background:#f4faf8;break-inside:avoid} @page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}.ir-assessment-audit{margin-top:14px;padding-top:10px;border-top:1px dashed #b7d5cc;font-size:11px}.ir-assessment-audit>strong{display:block;color:#176c60;margin:5px 0}.ir-audit-entry{padding:7px 0;border-top:1px solid #e2eeea;break-inside:avoid-page}.ir-audit-entry>strong{display:block}.ir-audit-note{font-size:10px;color:#61736f}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
@@ -2151,7 +2199,7 @@ ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(
  d.head.append(st);irBuild(d.body,irPatientRecords(),p,ir('ir-notes').value);d.close();w.focus();w.print();ir('ir-status').textContent='Na janela de impressão, desmarque Cabeçalhos e rodapés em Mais configurações para ocultar about:blank, data e numeração automática.'
 };
 const irOriginalRefresh=refreshData;
-refreshData=async function(...args){const result=await irOriginalRefresh(...args);irSync();return result};
+refreshData=async function(...args){const result=await irOriginalRefresh(...args);ir46DataReady=!!result;irSync();return result};
 const irOriginalSelect=setSelectedPatient;
 setSelectedPatient=function(...args){const result=irOriginalSelect(...args);if(ir('ir-patient')&&patientRows.some(p=>p.id===args[0])){ir('ir-patient').value=args[0];irRender()}return result};
 irSync();
