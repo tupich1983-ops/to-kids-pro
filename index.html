@@ -151,36 +151,64 @@ function renderPatientProfile(){
  const head=document.createElement('strong');head.textContent='Referência: '+band.name;area.append(head);
  for(const [label,value] of [['Motricidade e exploração',band.motor],['Comunicação e brincar',band.communication],['Alimentação',band.feeding]]){const para=document.createElement('p');const strong=document.createElement('strong');strong.textContent=label+': ';para.append(strong,document.createTextNode(value));area.append(para)}
 }
+// Correção 28: atualização atômica do histórico, sem duplicar IDs nem trocar
+// o paciente ativo quando uma leitura falhar. Nenhuma escrita é repetida.
 async function refreshData(){
- if(!client||!clinicalSessionOwner)return;
+ if(!client||!clinicalSessionOwner)return false;
  const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch,serial=++clinicalLoadSerial;
- const {data:{user},error:ue}=await client.auth.getUser();if(ue||!user||user.id!==owner||!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
- const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,data_nascimento,criado_em').order('criado_em',{ascending:false});
- if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
- if(pe){msg('Erro ao carregar pacientes: '+pe.message,true);return}
- patientRows=pts||[];
- for(const name of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient'])$(name).replaceChildren();
- for(const p of patientRows){
-  const b=document.createElement('button');b.type='button';b.className='secondary patient-button';b.style.cssText='display:block;width:100%;text-align:left;margin:8px 0';b.textContent=p.nome+' · '+ageLabel(p)+' · '+(p.dados?.diagnostico||'Sem diagnóstico informado');b.onclick=()=>setSelectedPatient(p.id);$('patientlist').append(b);
-  for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;$(name).append(o)}
- }
- const {data:rs,error:re}=await client.from('registros_clinicos').select('id,paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
- if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
- if(re){msg('Erro ao carregar registros: '+re.message,true);return}
- allRecords=rs||[];
-  // Reutilizar a seleção atual; após recarregar a página, recuperar a seleção
-  // da mesma conta somente se o Supabase ainda autorizar esse paciente.
- if(!patientRows.some(p=>p.id===selectedPatientId)){
-   const remembered=readActivePatient(owner);
-   selectedPatientId=patientRows.some(p=>p.id===remembered)?remembered:(patientRows[0]?.id||null);
+ try{
+  const {data:auth,error:ue}=await client.auth.getUser();
+  if(ue||!auth?.user||auth.user.id!==owner)throw Error('Sessão não confirmada.');
+  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
+  const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,data_nascimento,criado_em').order('criado_em',{ascending:false});
+  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
+  if(pe)throw pe;
+  const {data:rs,error:re}=await client.from('registros_clinicos').select('id,paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
+  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
+  if(re)throw re;
+  // Só publicar os dois conjuntos após ambas as consultas terminarem bem.
+  const unique=(rows)=>[...new Map((rows||[]).filter(x=>x?.id).map(x=>[x.id,x])).values()];
+  const freshPatients=unique(pts),freshRecords=unique(rs);
+  const remembered=readActivePatient(owner);
+  const nextPatient=freshPatients.some(p=>p.id===selectedPatientId)?selectedPatientId:
+    freshPatients.some(p=>p.id===remembered)?remembered:(freshPatients[0]?.id||null);
+  const previousPatient=selectedPatientId;
+  patientRows=freshPatients;allRecords=freshRecords;
+  for(const name of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient'])$(name).replaceChildren();
+  for(const p of patientRows){
+   const b=document.createElement('button');b.type='button';b.className='secondary patient-button';
+   b.style.cssText='display:block;width:100%;text-align:left;margin:8px 0';
+   b.textContent=p.nome+' · '+ageLabel(p)+' · '+(p.dados?.diagnostico||'Sem diagnóstico informado');
+   b.onclick=()=>setSelectedPatient(p.id);$('patientlist').append(b);
+   for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){
+    const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;$(name).append(o);
+   }
   }
- if(selectedPatientId)setSelectedPatient(selectedPatientId);
-  else{clearActivePatient(owner);updateActivePatientUI();}
- renderModuleHistory();renderWizardHistory();$('recordlist').replaceChildren();
- for(const r of rs||[]){const row=document.createElement('p');row.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.tipo)+' · '+clean(r.titulo)+' · '+clean(r.conteudo?.observacao);$('recordlist').append(row)}
- $('evallist').replaceChildren();
- for(const r of rs.filter(x=>x.tipo==='avaliacao'&&x.conteudo?.formato==='avaliacao_estruturada_v1')){
-  const el=document.createElement('article');el.className='history';const title=document.createElement('strong');title.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.conteudo.data||'')+' · '+clean(r.titulo);el.append(title);$('evallist').append(el)
+  // Um refresh do histórico não é uma solicitação para trocar de paciente.
+  // Em caso de paciente removido, a seleção precisa ser realinhada.
+  if(nextPatient){
+   if(previousPatient!==nextPatient)selectedPatientId=null;
+   setSelectedPatient(nextPatient);
+  }else{selectedPatientId=null;clearActivePatient(owner);updateActivePatientUI();$('patientprofile').hidden=true;}
+  renderModuleHistory();renderWizardHistory();
+  $('recordlist').replaceChildren();
+  for(const r of allRecords){
+   const row=document.createElement('p');
+   row.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.tipo)+' · '+clean(r.titulo)+' · '+clean(r.conteudo?.observacao);
+   $('recordlist').append(row);
+  }
+  $('evallist').replaceChildren();
+  for(const r of allRecords.filter(x=>x.tipo==='avaliacao'&&x.conteudo?.formato==='avaliacao_estruturada_v1')){
+   const el=document.createElement('article');el.className='history';const title=document.createElement('strong');
+   title.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.conteudo.data||'')+' · '+clean(r.titulo);
+   el.append(title);$('evallist').append(el);
+  }
+  return true;
+ }catch(error){
+  if(clinicalSessionMatches(owner,epoch)&&serial===clinicalLoadSerial){
+   msg('Não foi possível atualizar o histórico: '+(error?.message||'erro de conexão')+'. Os dados já exibidos foram preservados; tente Atualizar lista novamente.',true);
+  }
+  return false;
  }
 }
 // Correção 20: cadastro de paciente com confirmação de gravação e proteção contra envio duplo.
