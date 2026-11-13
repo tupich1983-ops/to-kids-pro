@@ -1102,8 +1102,44 @@ function ptoiRender(){
  const records=ptoiRecords(pid), goals=records.filter(r=>r.conteudo.formato==='tokids_ptoi_meta_v1').slice().reverse();
  if(!goals.length){list.textContent='Nenhuma meta cadastrada para este paciente.';return}
  const periodNames={curto:'Curto prazo',medio:'Médio prazo',longo:'Longo prazo'};
- for(const g of goals){
+ // Correção 39: visão consolidada, somente leitura, das metas do paciente ativo.
+ // A classificação depende apenas da última revisão profissional registrada.
+ const reviewStates39={'Manter meta':'Meta mantida','Ajustar meta':'Meta em ajuste','Concluir meta':'Meta concluída'};
+ const summaryRows39=goals.map((goal,index)=>{
+  const meta=goal.conteudo||{};
+  const reviews=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_revisao_v1'&&r.conteudo.meta_id===meta.meta_id)
+   .slice().sort((a,b)=>String(b.conteudo?.data||'').localeCompare(String(a.conteudo?.data||''))||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0));
+  const latest=reviews[0]?.conteudo||null;
+  return {index,meta,state:latest?(reviewStates39[latest.decisao]||'Decisão não reconhecida'):'Meta em acompanhamento',lastDate:latest?.data||''};
+ });
+ const overview39=ptoiElement('section');overview39.className='ptoi-overview';overview39.style.cssText='margin:14px 0 20px;padding:14px;border:1px solid #b7d9d0;border-radius:12px;background:#eef8f4';
+ overview39.append(ptoiElement('h4','Painel geral das metas terapêuticas'));
+ overview39.append(ptoiElement('p','Resumo das metas do paciente selecionado, conforme as últimas decisões registradas pelo terapeuta.','ptoi-note'));
+ const counters39=ptoiElement('div');counters39.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:8px;margin:12px 0';
+ const categories39=['Meta em acompanhamento','Meta mantida','Meta em ajuste','Meta concluída'];
+ for(const [label,count] of [['Total de metas',summaryRows39.length],...categories39.map(label=>[label,summaryRows39.filter(row=>row.state===label).length])]){
+  const tile=ptoiElement('div');tile.style.cssText='background:white;border:1px solid #cbded8;border-radius:9px;padding:10px';
+  const number=ptoiElement('strong',String(count));number.style.cssText='display:block;font-size:23px;color:#147d71';
+  tile.append(number,ptoiElement('span',label));counters39.append(tile);
+ }
+ overview39.append(counters39);
+ const overviewList39=ptoiElement('div');
+ for(const row of summaryRows39){
+  const entry=ptoiElement('div');entry.className='history';entry.style.cssText='background:white;margin:7px 0;padding:10px';
+  const title=ptoiElement('strong',ptoiSafe(row.meta.meta)||'Meta sem descrição');entry.append(title);
+  entry.append(ptoiElement('p','Área: '+(ptoiSafe(row.meta.area)||'Não informada')+' · Prazo: '+(periodNames[row.meta.prazo]||ptoiSafe(row.meta.prazo)||'Não informado'),'ptoi-note'));
+  const date=/^\d{4}-\d{2}-\d{2}$/.test(row.lastDate)?ptoiDate(row.lastDate):'Sem revisão registrada';
+  entry.append(ptoiElement('p','Situação: '+row.state+' · Última revisão: '+date,'ptoi-note'));
+  const go=ptoiElement('button','Ver acompanhamento da meta','secondary');go.type='button';go.style.cssText='margin:3px 0 0;padding:8px 12px;font-size:13px';
+  go.onclick=()=>{const target=list.querySelector('[data-ptoi-goal-index="'+row.index+'"]');if(target){target.scrollIntoView({behavior:'smooth',block:'start'});target.focus({preventScroll:true})}};
+  entry.append(go);overviewList39.append(entry);
+ }
+ overview39.append(overviewList39);
+ overview39.append(ptoiElement('p','Este painel não avalia automaticamente resultados nem altera registros clínicos.','ptoi-note'));
+ list.append(overview39);
+ for(const [goalIndex39,g] of goals.entries()){ 
   const d=g.conteudo, card=ptoiElement('article',undefined,'ptoi-card');
+  card.dataset.ptoiGoalIndex=String(goalIndex39);card.tabIndex=-1;
   card.append(ptoiElement('div',(periodNames[d.prazo]||d.prazo)+' · '+ptoiSafe(d.area),'ptoi-note'));
   card.append(ptoiElement('div',ptoiSafe(d.meta),'ptoi-goal-title'));
   const linked=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_atividade_v1'&&r.conteudo.meta_id===d.meta_id);
