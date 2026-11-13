@@ -524,6 +524,7 @@ $('savemodule').onclick=async()=>{
  finally{button.disabled=false}
 };
 $('printreport').onclick=()=>{const pid=$('modulepatient').value,p=patientRows.find(x=>x.id===pid);if(!p)return msg('Selecione um paciente.',true);const recs=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_modulo_v1');if(!recs.length)return msg('Não há módulos integrados para imprimir.',true);
+ if(!ir44Validate()){ir('ir-status').textContent='Corrija o período antes de imprimir.';return}
  const w=window.open('','_blank');if(!w)return msg('Permita a abertura de janela para imprimir.',true);const doc=w.document;doc.title='Relatório fictício - TO Kids PRO';const style=doc.createElement('style');style.textContent='body{font:14px Arial;max-width:800px;margin:40px auto;line-height:1.5}section{page-break-inside:avoid;margin:24px 0}h1{color:#164b4c}small{color:#666}';doc.head.append(style);const h=doc.createElement('h1');h.textContent='TO Kids PRO — Relatório de teste';doc.body.append(h);const warn=doc.createElement('p');warn.textContent='DOCUMENTO FICTÍCIO — NÃO UTILIZAR COMO LAUDO OU PRONTUÁRIO REAL';doc.body.append(warn);const name=doc.createElement('p');name.textContent='Código do paciente: '+p.nome;doc.body.append(name);
  for(const r of recs){const sec=doc.createElement('section'),title=doc.createElement('h2');title.textContent=r.titulo+' — '+clean(r.conteudo.data);sec.append(title);for(const [k,v] of Object.entries(r.conteudo.campos||{})){if(!v)continue;const para=doc.createElement('p');const label=moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;para.textContent=label+': '+v;sec.append(para)}doc.body.append(sec)}w.focus();w.print()};
 const toolNames={library:'Biblioteca das 100 atividades ilustradas',sensory:'Desenvolvimento sensoriomotor',foodactivities:'Atividades de seletividade alimentar',feeding:'Avaliação alimentar (legado)',foodplan:'Plano alimentar (legado)',foodprogress:'Evolução alimentar (legado)',plan:'Planejamento de sessões',advanced:'Marcos do desenvolvimento'};
@@ -1800,6 +1801,16 @@ const unifiedReportHelp=document.createElement('p');
 unifiedReportHelp.className='note';
 unifiedReportHelp.textContent='Este é o relatório único do paciente. Para criar ou editar planos terapêuticos e evoluções, utilize os módulos Planejar sessões e Evoluções clínicas. Os registros anteriores permanecem preservados no Supabase e são consultados aqui.';
 integratedReport.insertBefore(unifiedReportHelp,integratedReport.children[1]);
+// Correção 44 — preferências de impressão locais, sem gravação de dados clínicos.
+const ir44=document.createElement('fieldset');ir44.id='ir44-options';
+ir44.innerHTML=`<legend>Correção 44 — Personalizar relatório</legend><p style="font-size:13px">Selecione as seções e o período. O filtro considera a data clínica registrada, quando disponível, ou a data de criação. As metas do PTOI também são filtradas por sua data de cadastro.</p><div class="history-filter-bar"><label for="ir44-from">Data inicial<input id="ir44-from" type="date"></label><label for="ir44-to">Data final<input id="ir44-to" type="date"></label><button type="button" class="secondary" id="ir44-clear">Limpar período</button></div><div id="ir44-sections" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px"></div><p id="ir44-feedback" role="status" style="font-size:13px"></p>`;
+integratedReport.insertBefore(ir44,document.getElementById('ir-preview'));
+const ir44Choices=[['summary','Resumo documental'],['assessments','Avaliações'],['goals','Metas e acompanhamentos'],['evolutions','Outras evoluções'],['notes','Conclusão profissional']];
+for(const [key,label] of ir44Choices){const lab=document.createElement('label');lab.style.cssText='display:flex;align-items:center;gap:8px;font-size:13px;margin:0';const cb=document.createElement('input');cb.type='checkbox';cb.id='ir44-'+key;cb.checked=true;cb.style.cssText='width:auto;margin:0';lab.append(cb,document.createTextNode(label));ir44.querySelector('#ir44-sections').append(lab)}
+function ir44Settings(){return {from:document.getElementById('ir44-from').value,to:document.getElementById('ir44-to').value,sections:Object.fromEntries(ir44Choices.map(([key])=>[key,document.getElementById('ir44-'+key).checked]))}}
+function ir44RecordDate(r){const raw=String(r?.conteudo?.data||r?.criado_em||'');const m=/^(\d{4}-\d{2}-\d{2})/.exec(raw);return m?m[1]:''}
+function ir44Records(records,settings){return records.filter(r=>{const date=ir44RecordDate(r);return (!settings.from||(date&&date>=settings.from))&&(!settings.to||(date&&date<=settings.to))})}
+function ir44Validate(){const s=ir44Settings(),feedback=document.getElementById('ir44-feedback');if(s.from&&s.to&&s.from>s.to){feedback.textContent='A data inicial não pode ser posterior à data final.';return false}feedback.textContent='Prévia atualizada. Os filtros não alteram registros salvos.';return true}
 const ir=id=>document.getElementById(id);
 const report43Style=document.createElement('style');
 report43Style.textContent='#ir-preview .ir-report-review{margin:8px 0;padding:9px 12px;border-left:3px solid #72aa9c;background:#f4faf8;border-radius:4px}#ir-preview .ir-report-review p{margin:4px 0}';
@@ -1877,8 +1888,9 @@ function irPatientRecords(){
  return allRecords.filter(r=>r.paciente_id===pid);
 }
 function irLatestNotes(records){return records.find(r=>r.conteudo?.formato===irFormats.notes)?.conteudo?.observacoes||''}
-function irBuild(target,records,patient,notes){
+function irBuild(target,records,patient,notes,settings=ir44Settings()){
  target.replaceChildren();
+ records=ir44Records(records,settings);
  irElement('h3','Relatório de evolução terapêutica — dados fictícios',target);
  irLine(target,'Paciente',patient?.nome||'Não selecionado');irLine(target,'Faixa etária',patient?ageLabel(patient):'');
  irLine(target,'Diagnóstico informado',patient?.dados?.diagnostico||'Não informado');
@@ -1893,7 +1905,8 @@ function irBuild(target,records,patient,notes){
  const legacyPlans=records.filter(r=>r.tipo==='plano_terapeutico'&&r.conteudo?.formato==='tokids_modulo_v1');
  const legacyEvos=records.filter(r=>r.tipo==='evolucao'&&r.conteudo?.formato==='tokids_modulo_v1');
  function section(title){return irElement('h4',title,target,'ir-section-title')}
- section('Resumo documental do acompanhamento');
+ if(settings.from||settings.to)irLine(target,'Período selecionado',(settings.from?irDateBR(settings.from):'Início não delimitado')+' a '+(settings.to?irDateBR(settings.to):'Fim não delimitado'));
+ if(settings.sections.summary){section('Resumo documental do acompanhamento');
  irLine(target,'Avaliações identificadas',String(assessments.length));
  irLine(target,'Metas cadastradas no PTOI',String(goals.length));
  irLine(target,'Evoluções vinculadas ao PTOI',String(evolutions.length));
@@ -1906,7 +1919,8 @@ function irBuild(target,records,patient,notes){
  irLine(target,'Metas em ajuste na última revisão',String(states['Ajustar meta']));
  irLine(target,'Metas concluídas na última revisão',String(states['Concluir meta']));
  irElement('p','Os indicadores são contagens de registros e decisões documentadas, não escores de desempenho, melhora clínica ou eficácia da intervenção.',target,'ir-review-note');
- section('1. Avaliações e informações funcionais');
+ }
+ if(settings.sections.assessments){section('1. Avaliações e informações funcionais');
  if(!assessments.length)irElement('p','Nenhuma avaliação estruturada encontrada.',target);
  for(const r of assessments){const box=irElement('div',null,target,'history');irElement('strong',(r.titulo||'Avaliação')+' · '+irDate(r),box);const c=r.conteudo||{};
  if(Array.isArray(c.etapas)){for(const step of c.etapas){const values=(step.campos||[]).filter(f=>String(f.valor||'').trim());if(!values.length)continue;irElement('h5',step.titulo,box);for(const f of values)irLine(box,f.rotulo,f.valor)}}
@@ -1914,7 +1928,8 @@ function irBuild(target,records,patient,notes){
  else for(const [k,v] of Object.entries(c.campos||{})){const label=moduleSchemas[c.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;irLine(box,label,v)}
  irAssessmentAudit(box,c,r);
  }
- section('2. Metas do PTOI e acompanhamento');
+ }
+ if(settings.sections.goals){section('2. Metas do PTOI e acompanhamento');
  if(!goals.length&&!legacyPlans.length)irElement('p','Nenhum plano ou meta cadastrada.',target);
  for(const g of goals){const c=g.conteudo,box=irElement('div',null,target,'history');irElement('h5',irDeadline(c.prazo)+' · '+(c.area||'Área não informada'),box); irGoalFields(box,c);
  const goalReviews=reviewByGoal.get(c.meta_id)||[];
@@ -1937,12 +1952,15 @@ function irBuild(target,records,patient,notes){
  if(seenLegacyPlans.has(signature))continue;
  seenLegacyPlans.add(signature);
  const box=irElement('div',null,target,'history');irElement('strong',(r.titulo||'Plano terapêutico')+' · '+irDate(r),box);for(const [k,v] of Object.entries(r.conteudo.campos||{}))irLine(box,moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k,v)}
- section('3. Outras evoluções clínicas');
+ }
+ if(settings.sections.evolutions){section('3. Outras evoluções clínicas');
  const unlinked=evolutions.filter(r=>!r.conteudo?.meta_id||!goals.some(g=>g.conteudo?.meta_id&&g.conteudo.meta_id===r.conteudo.meta_id));
  if(!legacyEvos.length&&!unlinked.length)irElement('p','As evoluções vinculadas às metas estão apresentadas na seção 2.',target);
  for(const r of [...legacyEvos,...unlinked]){const box=irElement('div',null,target,'history');if(r.conteudo?.formato===irFormats.evolution)irElement('p','Evolução sem meta PTOI correspondente neste paciente; confira o vínculo no módulo Evoluções clínicas.',box,'ir-review-note');irElement('strong',(r.titulo||'Evolução')+' · '+irDate(r),box);for(const [k,v] of Object.entries(r.conteudo.campos||r.conteudo)){if(['formato','versao','modulo','meta_id','data','historico_edicoes','atualizado_em','editor_ultima_alteracao'].includes(k))continue;irLine(box,moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k,v)}}
- section('4. Observações e conclusão do terapeuta');
+ }
+ if(settings.sections.notes){section('4. Observações e conclusão do terapeuta');
  irElement('p',notes.trim()||'Nenhuma observação complementar informada.',target);
+ }
  const sign=irElement('section',null,target,'ir-signature');
  irElement('div','________________________________________',sign,'ir-sign-line');
  irElement('strong',professionalData.name||'Nome profissional não cadastrado',sign);
@@ -2105,8 +2123,10 @@ function comparison42Render(){
 for(const input of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])input.addEventListener('change',comparison42Render);
 comparison42Clear.onclick=()=>{for(const el of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])el.value='';comparison42Render()};
 
-function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render();comparison42Render()}
+function irRender(){if(!ir44Validate())return;const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render();comparison42Render()}
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
+for(const el of ir44.querySelectorAll('input'))el.addEventListener('change',()=>{if(ir44Validate())irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
+ir44.querySelector('#ir44-clear').onclick=()=>{document.getElementById('ir44-from').value='';document.getElementById('ir44-to').value='';ir44Validate();irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)};
 ir('ir-patient').onchange=irRender;
 ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
 ir('ir-refresh').onclick=async()=>{await refreshData();ir('ir-status').textContent='Dados atualizados do Supabase.'};
