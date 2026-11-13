@@ -30,7 +30,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 #ptoi-root .ptoi-note{font-size:13px;color:#496b63}#ptoi-root .ptoi-goal-title{font-weight:700}
 @media(max-width:650px){#ptoi-root .ptoi-grid{grid-template-columns:1fr}}
 #password-recovery-panel{border:1px solid #b7d9d0;border-radius:12px;padding:16px;margin-top:16px;background:#f8fcfa}#password-recovery-panel[hidden]{display:none!important}#password-recovery-panel label{display:block;margin-top:10px}#password-recovery-panel input{width:100%}#password-recovery-panel button{margin-top:12px}
-.history-filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:12px 0}.history-filter-bar label{flex:1 1 150px;margin:0;font-size:13px}.history-filter-bar select,.history-filter-bar input{margin-top:5px}.history-filter-bar button{flex:0 0 auto;margin:0 0 2px}#historycount{font-size:13px;color:#496b63}.ir-review-note{font-size:12px;color:#795a20;background:#fff7e5;border-left:3px solid #c7a55d;padding:8px 10px;border-radius:4px}</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
+.history-filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:12px 0}.history-filter-bar label{flex:1 1 150px;margin:0;font-size:13px}.history-filter-bar select,.history-filter-bar input{margin-top:5px}.history-filter-bar button{flex:0 0 auto;margin:0 0 2px}#historycount{font-size:13px;color:#496b63}.ir-review-note{font-size:12px;color:#795a20;background:#fff7e5;border-left:3px solid #c7a55d;padding:8px 10px;border-radius:4px}.history-clinical-entry summary{cursor:pointer;font-weight:700;line-height:1.5}.history-entry-meta{font-size:12px;color:#496b63;margin:12px 0}.history-entry-content{overflow-wrap:anywhere;line-height:1.6}.history-field-item{margin:7px 0 7px 12px;padding-left:9px;border-left:2px solid #e1eeea;white-space:pre-wrap}.history-field-item strong{color:#164b4c}</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
 <div class="dashboard-grid" id="dashboard" aria-label="Módulos principais">
 <button class="dashboard-tile" type="button" data-page="patients"><span class="tile-icon">👶</span>Pacientes</button>
 <button class="dashboard-tile" type="button" data-page="evaluation"><span class="tile-icon">📋</span>Avaliação completa</button>
@@ -158,37 +158,68 @@ function historyRecordDate(r){
  const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');
  return `${y}-${m}-${d}`;
 }
-function renderPatientHistory(){
- const history=$('patienthistory'),count=$('historycount'),type=$('historytype');
- if(!history||!count||!type)return;
- history.replaceChildren();
- const pid=selectedPatientId;
- if(!pid){count.textContent='';return;}
- const records=allRecords.filter(r=>r.paciente_id===pid);
- const selectedType=type.value;
- const types=[...new Set(records.map(r=>String(r.tipo||'Sem tipo informado'))) ].sort((a,b)=>a.localeCompare(b,'pt-BR'));
- type.replaceChildren();
- const all=document.createElement('option');all.value='';all.textContent='Todos os tipos';type.append(all);
- for(const name of types){const opt=document.createElement('option');opt.value=name;opt.textContent=name.replace(/_/g,' ');type.append(opt);}
- type.value=types.includes(selectedType)?selectedType:'';
- const from=$('historyfrom')?.value||'',to=$('historyto')?.value||'';
- if(from&&to&&from>to){count.textContent='A data inicial não pode ser posterior à data final.';return;}
- const shown=records.filter(r=>{
-  const date=historyRecordDate(r),kind=String(r.tipo||'Sem tipo informado');
-  return (!type.value||kind===type.value)&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));
- });
- count.textContent=`Exibindo ${shown.length} de ${records.length} registro(s) do paciente ativo.`;
- if(!shown.length){history.textContent=records.length?'Nenhum registro corresponde aos filtros selecionados.':'Nenhum registro clínico salvo para este paciente.';return;}
- for(const r of shown){
-  const details=document.createElement('details');details.className='history';
-  const summary=document.createElement('summary');
-  const date=historyRecordDate(r);
-  summary.textContent=clean(r.titulo)+' · '+clean(r.tipo).replace(/_/g,' ')+' · '+(date?date.split('-').reverse().join('/'):'Data não informada');
-  details.append(summary);
-  const pre=document.createElement('pre');pre.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:13px system-ui';
-  pre.textContent=JSON.stringify(r.conteudo??{},null,2);details.append(pre);history.append(details);
+ // Correção 30: histórico em ordem cronológica e leitura estruturada dos campos.
+ function historyDisplayDate(raw){
+  if(!raw)return 'Data não informada';
+  const d=new Date(raw);return Number.isNaN(d.getTime())?'Data não informada':d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
  }
-}
+ function historyAppendFields(parent,value,depth=0){
+  if(depth>7){const p=document.createElement('p');p.textContent='Conteúdo aninhado não exibido.';parent.append(p);return;}
+  if(value===null||value===undefined||value==='')return;
+  if(Array.isArray(value)){
+   for(let i=0;i<value.length;i++){
+    const item=document.createElement('div');item.className='history-field-item';
+    if(value.length>1){const label=document.createElement('strong');label.textContent='Item '+(i+1);item.append(label);}
+    historyAppendFields(item,value[i],depth+1);parent.append(item);
+   }
+  }else if(typeof value==='object'){
+   for(const [key,val] of Object.entries(value)){
+    if(val===null||val===undefined||val==='')continue;
+    const item=document.createElement('div');item.className='history-field-item';
+    const label=document.createElement('strong');label.textContent=key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())+': ';
+    item.append(label);
+    if(typeof val==='object')historyAppendFields(item,val,depth+1);
+    else item.append(document.createTextNode(String(val)));
+    parent.append(item);
+   }
+  }else parent.append(document.createTextNode(String(value)));
+ }
+ function renderPatientHistory(){
+  const history=$('patienthistory'),count=$('historycount'),type=$('historytype');
+  if(!history||!count||!type)return;
+  history.replaceChildren();
+  const pid=selectedPatientId;
+  if(!pid){count.textContent='';return;}
+  const records=allRecords.filter(r=>r.paciente_id===pid);
+  const selectedType=type.value;
+  const types=[...new Set(records.map(r=>String(r.tipo||'Sem tipo informado')))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  type.replaceChildren();
+  const all=document.createElement('option');all.value='';all.textContent='Todos os tipos';type.append(all);
+  for(const name of types){const opt=document.createElement('option');opt.value=name;opt.textContent=name.replace(/_/g,' ');type.append(opt);}
+  type.value=types.includes(selectedType)?selectedType:'';
+  const from=$('historyfrom')?.value||'',to=$('historyto')?.value||'';
+  if(from&&to&&from>to){count.textContent='A data inicial não pode ser posterior à data final.';return;}
+  const shown=records.filter(r=>{
+   const date=historyRecordDate(r),kind=String(r.tipo||'Sem tipo informado');
+   return (!type.value||kind===type.value)&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));
+  }).sort((a,b)=>{
+   const ta=Date.parse(a.criado_em||'')||0,tb=Date.parse(b.criado_em||'')||0;
+   return tb-ta||String(b.id||'').localeCompare(String(a.id||''));
+  });
+  count.textContent=`Exibindo ${shown.length} de ${records.length} registro(s) do paciente ativo · mais recentes primeiro.`;
+  if(!shown.length){history.textContent=records.length?'Nenhum registro corresponde aos filtros selecionados.':'Nenhum registro clínico salvo para este paciente.';return;}
+  for(const r of shown){
+   const details=document.createElement('details');details.className='history history-clinical-entry';
+   const summary=document.createElement('summary');
+   summary.textContent=(clean(r.titulo)||'Registro sem título')+' · '+(clean(r.tipo).replace(/_/g,' ')||'Sem tipo')+' · '+historyDisplayDate(r.criado_em);
+   details.append(summary);
+   const meta=document.createElement('p');meta.className='history-entry-meta';meta.textContent='Tipo: '+(clean(r.tipo).replace(/_/g,' ')||'Não informado')+' · Registrado em: '+historyDisplayDate(r.criado_em);details.append(meta);
+   const content=document.createElement('div');content.className='history-entry-content';
+   historyAppendFields(content,r.conteudo??{});
+   if(!content.textContent.trim())content.textContent='Nenhum conteúdo descritivo informado.';
+   details.append(content);history.append(details);
+  }
+ }
 for(const id of ['historytype','historyfrom','historyto'])$(id)?.addEventListener('change',renderPatientHistory);
 $('historyclear')?.addEventListener('click',()=>{
  $('historytype').value='';$('historyfrom').value='';$('historyto').value='';renderPatientHistory();
