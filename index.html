@@ -1475,61 +1475,55 @@ setSelectedPatient=function(...args){const result=irOriginalSelect(...args);if(i
 irSync();
 
 
-// Correção 13: aviso de alterações clínicas não salvas.
-// Não persiste dados clínicos no navegador nem altera as chamadas Supabase.
+// Correção 26: aviso unificado de rascunhos clínicos ao navegar ou fechar a aba.
+// Rascunhos permanecem somente em memória; o Supabase é a fonte de dados salvos.
 (function installClinicalUnsavedGuard(){
-  const areas=[
-    {name:'avaliação', root:document.getElementById('wizard'), status:document.getElementById('wizardstatus'), success:/avaliação fictícia (?:salva|atualizada)/i},
-    {name:'evolução', ids:['evo-date','evo-activities','evo-performance','evo-response','evo-status','evo-next'], status:document.getElementById('evo-message'), success:/evolução vinculada salva no supabase/i}
-  ];
-  const dirty=new Set();
-  const fields=(area)=>area.ids?area.ids.map(id=>document.getElementById(id)).filter(Boolean):area.root?Array.from(area.root.querySelectorAll('input,textarea,select')):[];
-  // O assistente de avaliação pode reconstruir os campos a cada etapa.
-  document.addEventListener('input',e=>{
-    const t=e.target;
-    if(!(t instanceof HTMLElement))return;
-    if(t.closest('#wizard')||t.closest('#wizardpanel')||t.id?.startsWith('wizard'))dirty.add('avaliação');
-    if(t.id?.startsWith('evo-'))dirty.add('evolução');
-  },true);
-  document.addEventListener('change',e=>{
-    const t=e.target;
-    if(!(t instanceof HTMLElement))return;
-    if(t.closest('#wizard')||t.closest('#wizardpanel')||t.id?.startsWith('wizard'))dirty.add('avaliação');
-    if(t.id?.startsWith('evo-') && !['evo-patient','evo-goal'].includes(t.id))dirty.add('evolução');
-  },true);
-  const watch=(id,name,re)=>{
-    const node=document.getElementById(id);
-    if(!node)return;
-    new MutationObserver(()=>{
-      if(re.test(node.textContent||''))dirty.delete(name);
-    }).observe(node,{childList:true,subtree:true,characterData:true});
-  };
-  watch('wizardstatus','avaliação',/avaliação fictícia (?:salva|atualizada)/i);
-  watch('evo-message','evolução',/evolução vinculada salva no supabase/i);
-  // Correção 16: proteger também a navegação interna entre módulos.
-  // A confirmação não substitui o salvamento no Supabase.
-  document.addEventListener('click',event=>{
-    const target=event.target;
-    if(!(target instanceof Element)||!dirty.size)return;
-    const navigation=target.closest('button[data-page],#homebutton');
-    if(!navigation)return;
-    const destination=navigation.getAttribute('data-page');
-    const active=document.querySelector('.dashboard-tile.active');
-    if(destination && active===navigation)return;
-    const names=[...dirty].join(' e ');
-    const leave=window.confirm('Existem alterações não salvas em '+names+'. Se você continuar, essas alterações poderão ser perdidas. Deseja sair sem salvar?');
-    if(!leave){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
-    dirty.clear();
-  },true);
-  window.addEventListener('beforeunload',event=>{
-    if(!dirty.size)return;
-    event.preventDefault();
-    event.returnValue='';
-  });
+ const changed=new Set();
+ const category=el=>{
+  if(!(el instanceof Element))return null;
+  if(el.closest('#wizardform'))return 'avaliação completa';
+  if(el.closest('#moduleform'))return 'módulo clínico';
+  if(['recordtitle','recordnote'].includes(el.id))return 'registro clínico';
+  if(['evaldemand','evalnotes'].includes(el.id)||/^domain\d+$/.test(el.id))return 'avaliação estruturada';
+  if(el.id==='ir-notes')return 'relatório';
+  if(el.id?.startsWith('ptoi-') && !['ptoi-patient','ptoi-status'].includes(el.id) && !['SELECT','BUTTON'].includes(el.tagName))return 'PTOI';
+  if(el.id?.startsWith('evo-') && !['evo-patient','evo-goal','evo-message'].includes(el.id) && !['SELECT','BUTTON'].includes(el.tagName))return 'evolução';
+  return null;
+ };
+ document.addEventListener('input',e=>{const c=category(e.target);if(c)changed.add(c)},true);
+ document.addEventListener('change',e=>{const c=category(e.target);if(c)changed.add(c)},true);
+ const success=[
+  ['wizardstatus','avaliação completa',/avaliação fictícia (?:salva|atualizada)/i],
+  ['evo-message','evolução',/evolução vinculada salva no supabase/i],
+  ['ptoi-status','PTOI',/(?:meta|ptoi).*(?:salv|atualiz)/i],
+  ['ir-status','relatório',/(?:relatório|registro).*(?:salv|atualiz)/i],
+  ['status','módulo clínico',/módulo fictício salvo no supabase/i],
+  ['status','registro clínico',/registro fictício salvo no supabase/i],
+  ['status','avaliação estruturada',/avaliação fictícia salva no supabase/i]
+ ];
+ const byNode=new Map();
+ for(const [id,kind,re] of success){const node=$(id);if(!node)continue;const entries=byNode.get(node)||[];entries.push([kind,re]);byNode.set(node,entries)}
+ for(const [node,entries] of byNode){new MutationObserver(()=>{const message=node.textContent||'';for(const [kind,re] of entries)if(re.test(message))changed.delete(kind)}).observe(node,{childList:true,subtree:true,characterData:true})}
+ const pending=()=>['createrecord','saveeval','wizardfinish','savemodule','ptoi-save','evo-save','ir-save'].some(id=>$(id)?.disabled);
+ document.addEventListener('click',event=>{
+  const target=event.target;
+  if(!(target instanceof Element))return;
+  const navigation=target.closest('button[data-page],#homebutton');
+  if(!navigation)return;
+  if(pending()){event.preventDefault();event.stopImmediatePropagation();alert('Aguarde a conclusão do salvamento antes de mudar de módulo.');return}
+  if(!changed.size)return;
+  const destination=navigation.getAttribute('data-page');
+  if(destination&&navigation.classList.contains('active'))return;
+  if(!confirm('Há alterações não salvas em '+[...changed].join(', ')+'. Sair deste módulo pode descartar os dados. Deseja continuar?')){
+   event.preventDefault();event.stopImmediatePropagation();return;
+  }
+  // A confirmação vale apenas para esta navegação; novos campos serão monitorados.
+  changed.clear();
+ },true);
+ window.addEventListener('beforeunload',event=>{
+  if(!changed.size&&!pending())return;
+  event.preventDefault();event.returnValue='';
+ });
 })();
 
 // Correção 14: bloqueia tentativas de gravação sem conexão aparente.
