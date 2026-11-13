@@ -1239,6 +1239,7 @@ evoRoot.style.cssText='padding:20px;margin:0 0 20px;border:1px solid #c8e1dc;bor
 evoRoot.innerHTML=`<h3>Evolução clínica vinculada ao PTOI</h3><p class="note">Registre o desempenho da sessão em relação a uma meta já cadastrada. Exclusivo para pacientes fictícios.</p>
 <label for="evo-patient">Paciente fictício</label><select id="evo-patient"></select>
 <label for="evo-goal">Meta terapêutica do PTOI</label><select id="evo-goal"></select>
+<section id="evo-goal-context" class="history" aria-live="polite" style="background:#eef8f4"><strong>Meta e atividades vinculadas</strong><div id="evo-goal-summary"></div><div id="evo-linked-activities"></div><p style="font-size:12px">Consulta somente leitura. Selecione manualmente as atividades efetivamente realizadas e descreva o desempenho observado.</p></section>
 <label for="evo-date">Data da sessão</label><input type="date" id="evo-date">
 <label for="evo-activities">Atividades e estratégias utilizadas</label><textarea id="evo-activities" rows="2" placeholder="Atividades, adaptações e pistas oferecidas"></textarea>
 <label for="evo-performance">Desempenho mensurável / nível de ajuda</label><textarea id="evo-performance" rows="2" placeholder="Ex.: realizou 3/5 tentativas com pista verbal"></textarea>
@@ -1257,6 +1258,42 @@ function evoSync(){
  else if(patientRows.some(p=>p.id===old))sel.value=old;
  evoGoals();
 }
+// Correção 34 — mostrar o contexto da meta e atividades da Biblioteca vinculadas.
+function evoRenderGoalContext(){
+ const summary=evo$('evo-goal-summary'),box=evo$('evo-linked-activities');
+ if(!summary||!box)return;
+ summary.replaceChildren();box.replaceChildren();
+ const pid=evo$('evo-patient').value,metaId=evo$('evo-goal').value;
+ const goal=allRecords.find(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1'&&r.conteudo.meta_id===metaId);
+ if(!goal){summary.textContent='Selecione um paciente com uma meta cadastrada.';return;}
+ const d=goal.conteudo;
+ for(const [label,value] of [['Meta',d.meta],['Linha de base',d.linha_base],['Critério de alcance',d.criterio]]){
+  if(!value)continue;
+  const p=document.createElement('p'),strong=document.createElement('strong');strong.textContent=label+': ';
+  p.append(strong,document.createTextNode(String(value)));summary.append(p);
+ }
+ const linked=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_atividade_v1'&&r.conteudo.meta_id===metaId);
+ if(!linked.length){box.textContent='Nenhuma atividade da Biblioteca vinculada a esta meta.';return;}
+ const heading=document.createElement('p');heading.textContent='Atividades vinculadas ('+linked.length+'):';box.append(heading);
+ for(const record of linked){
+  const a=record.conteudo.atividade||{};
+  const item=document.createElement('div');item.className='history';
+  const title=document.createElement('strong');title.textContent=String(a.titulo||'Atividade sem título');item.append(title);
+  for(const [label,value] of [['Área',a.area],['Materiais',a.materiais],['Aplicação',a.aplicacao],['Adaptações',a.adaptacoes],['O que observar',a.observacao]]){
+   if(!value)continue;const p=document.createElement('p');p.style.overflowWrap='anywhere';
+   const b=document.createElement('strong');b.textContent=label+': ';p.append(b,document.createTextNode(String(value)));item.append(p);
+  }
+  const use=document.createElement('button');use.type='button';use.className='secondary';
+  use.textContent='Adicionar ao campo de atividades';
+  use.onclick=()=>{
+   if(evo$('evo-patient').value!==pid||evo$('evo-goal').value!==metaId)return;
+   const field=evo$('evo-activities'),name=String(a.titulo||'').trim();if(!name)return;
+   const lines=field.value.split('\n').map(x=>x.trim());
+   if(!lines.includes(name))field.value=(field.value.trim()?field.value.trim()+'\n':'')+name;
+   field.focus();
+  };item.append(use);box.append(item);
+ }
+}
 function evoGoals(){
  const pid=evo$('evo-patient').value,sel=evo$('evo-goal'),old=sel.value;sel.replaceChildren();
  const goals=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1');
@@ -1264,7 +1301,9 @@ function evoGoals(){
  if(goals.some(r=>r.conteudo.meta_id===old))sel.value=old;
  if(!goals.length){const op=document.createElement('option');op.value='';op.textContent='Cadastre uma meta no PTOI primeiro';sel.append(op)}
  evoHistory();
+ evoRenderGoalContext();
 }
+evo$('evo-goal').addEventListener('change',evoRenderGoalContext);
 // Edição auditável de evoluções: atualização do mesmo ID, com snapshot anterior.
 const evoEditFields=[['data','Data da sessão','date'],['atividades','Atividades e estratégias','textarea'],['medida','Desempenho mensurável','textarea'],['resposta','Participação, resposta e barreiras','textarea'],['estado','Situação da meta','select'],['proximos','Conduta e próximos passos','textarea']];
 function evoAuditLabel(editor){return typeof irEditorLabel==='function'?irEditorLabel(editor):(editor?.nome||editor?.email||'Não identificado no registro anterior')}
