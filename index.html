@@ -355,8 +355,27 @@ function renderModuleHistory(){const area=$('modulehistory');area.replaceChildre
  for(const r of recs){const div=document.createElement('div');div.className='history';const h=document.createElement('strong');h.textContent=clean(r.titulo)+' · '+clean(r.conteudo?.data||'');div.append(h);for(const [k,v] of Object.entries(r.conteudo?.campos||{})){if(!v)continue;const row=document.createElement('p');const lab=moduleSchemas[r.conteudo?.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;row.textContent=lab+': '+String(v).replace(/\\n/g,'\n');row.style.whiteSpace='pre-wrap';div.append(row)}area.append(div)}}
 $('modulepatient').onchange=renderModuleHistory;typeSelect.onchange=renderModuleForm;renderModuleForm();
 $('clearform').onclick=renderModuleForm;
-$('savemodule').onclick=async()=>{const paciente_id=$('modulepatient').value;if(!paciente_id)return msg('Cadastre um paciente fictício primeiro.',true);const module=typeSelect.value,schema=moduleSchemas[module],campos={};for(const [key] of schema.fields)campos[key]=$('m_'+key).value.trim();if(!Object.values(campos).some(Boolean))return msg('Preencha ao menos um campo.',true);
- const conteudo={formato:'tokids_modulo_v1',versao:1,modulo:module,data:$('m_date').value,campos};const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:schema.type,titulo:schema.title,conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)return msg('Erro ao salvar: '+error.message,true);await refreshData();msg('Módulo fictício salvo no Supabase.');};
+// Correção 18: confirmação independente da atualização visual e bloqueio de envio duplo.
+$('savemodule').onclick=async()=>{
+ const button=$('savemodule');if(button.disabled||!client)return;
+ const paciente_id=$('modulepatient').value;
+ if(!paciente_id)return msg('Cadastre um paciente fictício primeiro.',true);
+ const module=typeSelect.value,schema=moduleSchemas[module],campos={};
+ for(const [key] of schema.fields)campos[key]=$('m_'+key).value.trim();
+ if(!Object.values(campos).some(Boolean))return msg('Preencha ao menos um campo.',true);
+ const conteudo={formato:'tokids_modulo_v1',versao:1,modulo:module,data:$('m_date').value,campos};
+ button.disabled=true;
+ try{
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:schema.type,titulo:schema.title,conteudo}).select('id').single();
+  if(error)throw error;
+  if(!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
+  const savedMessage='Módulo fictício salvo no Supabase.';
+  msg(savedMessage);
+  try{await refreshData();msg(savedMessage)}
+  catch(refreshError){console.warn('Módulo salvo, mas a atualização da lista falhou:',refreshError);msg(savedMessage+' Não foi possível atualizar a lista agora. NÃO salve novamente; atualize a lista quando a conexão voltar.');}
+ }catch(error){msg('Não foi possível confirmar o salvamento: '+(error?.message||'erro desconhecido')+'. Confira o histórico antes de tentar novamente.',true)}
+ finally{button.disabled=false}
+};
 $('printreport').onclick=()=>{const pid=$('modulepatient').value,p=patientRows.find(x=>x.id===pid);if(!p)return msg('Selecione um paciente.',true);const recs=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_modulo_v1');if(!recs.length)return msg('Não há módulos integrados para imprimir.',true);
  const w=window.open('','_blank');if(!w)return msg('Permita a abertura de janela para imprimir.',true);const doc=w.document;doc.title='Relatório fictício - TO Kids PRO';const style=doc.createElement('style');style.textContent='body{font:14px Arial;max-width:800px;margin:40px auto;line-height:1.5}section{page-break-inside:avoid;margin:24px 0}h1{color:#164b4c}small{color:#666}';doc.head.append(style);const h=doc.createElement('h1');h.textContent='TO Kids PRO — Relatório de teste';doc.body.append(h);const warn=doc.createElement('p');warn.textContent='DOCUMENTO FICTÍCIO — NÃO UTILIZAR COMO LAUDO OU PRONTUÁRIO REAL';doc.body.append(warn);const name=doc.createElement('p');name.textContent='Código do paciente: '+p.nome;doc.body.append(name);
  for(const r of recs){const sec=doc.createElement('section'),title=doc.createElement('h2');title.textContent=r.titulo+' — '+clean(r.conteudo.data);sec.append(title);for(const [k,v] of Object.entries(r.conteudo.campos||{})){if(!v)continue;const para=doc.createElement('p');const label=moduleSchemas[r.conteudo.modulo]?.fields.find(f=>f[0]===k)?.[1]||k;para.textContent=label+': '+v;sec.append(para)}doc.body.append(sec)}w.focus();w.print()};
