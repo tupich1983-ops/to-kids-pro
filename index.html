@@ -317,9 +317,21 @@ $('wizardfinish').onclick=async()=>{
   if(!edited){wizardDrafts.delete(paciente_id);try{localStorage.removeItem(wizardDraftKey(paciente_id))}catch(e){}}
   wizardEditingId=null;wizardValues={};wizardStep=0;
   $('wizardfinish').textContent='Concluir e salvar no Supabase';$('wizardcancel').hidden=true;
-  await refreshData();wizardRender();
-  $('wizardstatus').textContent=edited?'Avaliação fictícia atualizada no mesmo registro; versão anterior preservada no histórico.':'Avaliação fictícia salva no Supabase.';
- }catch(e){$('wizardstatus').textContent='Erro ao salvar: '+e.message}
+  // Correção 17: a gravação já foi confirmada pelo Supabase.
+  // Uma falha posterior ao atualizar a tela não é falha de salvamento.
+  const savedMessage=edited
+   ?'Avaliação fictícia atualizada no Supabase; versão anterior preservada no histórico.'
+   :'Avaliação fictícia salva no Supabase.';
+  $('wizardstatus').textContent=savedMessage;
+  try{
+   await refreshData();
+   wizardRender();
+   $('wizardstatus').textContent=savedMessage;
+  }catch(refreshError){
+   console.warn('Avaliação salva, mas a atualização da lista falhou:',refreshError);
+   $('wizardstatus').textContent=savedMessage+' Não foi possível atualizar a lista agora. NÃO salve novamente; atualize a lista quando a conexão voltar.';
+  }
+ }catch(e){$('wizardstatus').textContent='Não foi possível confirmar o salvamento: '+e.message+' Se a conexão caiu, confira o histórico antes de tentar novamente.'}
  finally{$('wizardfinish').disabled=false}
 };
 function renderWizardHistory(){
