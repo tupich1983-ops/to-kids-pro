@@ -882,7 +882,7 @@ subscriptionPanel.id='subscription-panel';
 subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
 <p><strong>Plano Profissional — R$ 29,90 por mês</strong></p>
 <p>7 dias grátis, conforme as condições apresentadas no checkout do Mercado Pago. O checkout hospedado exige vinculação posterior da assinatura à sua conta.</p>
-<p class="note"><strong>Integração em testes.</strong> A consulta financeira está integrada, mas ainda depende de testes com assinaturas e pagamentos reais antes do lançamento. Não utilize dados reais de pacientes.</p>
+<p class="note"><strong>Integração em testes.</strong> A confirmação automática do pagamento e a liberação ou suspensão de acesso ainda precisam ser validadas antes do lançamento. Não utilize dados reais de pacientes.</p>
 <button type="button" id="subscribe-mp">Abrir checkout Mercado Pago — R$ 29,90/mês</button>
 <p id="subscription-feedback" role="status" aria-live="polite"></p>
 <div class="history" id="subscription-status-panel" aria-live="polite">
@@ -912,7 +912,7 @@ subscriptionPanel.innerHTML=`<h3>Assinatura TO Kids PRO</h3>
 <p id="subscription-link-history" style="font-size:13px;color:#496b63">Nenhuma solicitação consultada.</p>
 <p style="font-size:13px;color:#795a20">A solicitação não comprova a titularidade nem ativa o plano. A liberação depende de verificação independente e aprovação segura.</p>
 </div>
-<p style="font-size:13px;color:#496b63">A situação exibida é consultada por uma função segura do Supabase, que verifica os dados do Mercado Pago. O checkout hospedado não identifica automaticamente sua conta. Após contratar, solicite a vinculação abaixo. A liberação de acesso exige verificação segura e regras no servidor; nenhum acesso é liberado por esta tela.</p>
+<p style="font-size:13px;color:#496b63">A situação exibida vem do registro da sua conta no Supabase. O checkout hospedado não identifica automaticamente sua conta. Após contratar, solicite a vinculação abaixo. A liberação de acesso exige verificação segura e regras no servidor; nenhum acesso é liberado por esta tela.</p>
 </div>`;
 profilePanel.append(subscriptionPanel);
 // Checkout hospedado do plano: não inclui referência individual ao terapeuta.
@@ -954,35 +954,46 @@ function subscriptionDate(value){
 }
 async function refreshSubscriptionStatus(){
  const requestNumber=++subscriptionRequestNumber;
- const label=$('subscription-status-value'),detail=$('subscription-status-detail');
+ const label=$('subscription-status-value');
+ const detail=$('subscription-status-detail');
+ const button=$('subscription-refresh');
  if(!label||!detail||!client)return;
  label.textContent='Consultando…';
- detail.textContent='Conferindo a assinatura diretamente com o serviço seguro do TO Kids PRO.';
- for(const id of ['subscription-trial-date','subscription-renewal-date']){$(id).hidden=true;$(id).textContent='';}
- const button=$('subscription-refresh');button.disabled=true;
+ detail.textContent='Verificando sua assinatura com o servidor.';
+ for(const id of ['subscription-trial-date','subscription-renewal-date']){
+  const element=$(id);
+  if(element){element.hidden=true;element.textContent='';}
+ }
+ if(button)button.disabled=true;
  try{
-  const {data:{session},error:authError}=await client.auth.getSession();
-  if(authError||!session?.access_token)throw Error('Sessão não confirmada. Entre novamente.');
-  const {data,error}=await client.functions.invoke('consultar-acesso-assinatura',{
-   body:{},headers:{Authorization:'Bearer '+session.access_token}
-  });
+  const {data:{user},error:authError}=await client.auth.getUser();
+  if(authError||!user)throw Error('Sessão não confirmada. Entre novamente.');
+  const {data,error}=await client.functions.invoke('consultar-acesso-assinatura',{body:{}});
   if(requestNumber!==subscriptionRequestNumber)return;
-  if(error)throw Error('Não foi possível confirmar a assinatura agora. Tente novamente mais tarde.');
+  if(error)throw Error('Não foi possível confirmar a assinatura no servidor.');
   if(!data||data.success!==true)throw Error('A verificação financeira não foi concluída.');
-  const status=String(data.status||'').toLowerCase();
-  const labels={trialing:'7 dias gratuitos',active:'Assinatura ativa',pending:'Pagamento pendente',paused:'Assinatura pausada',cancelled:'Assinatura cancelada',authorized:'Aguardando confirmação financeira'};
-  label.textContent=labels[status]||(data.reason==='not_linked'?'Aguardando vinculação':'Acesso não confirmado');
-  const reasons={not_linked:'Nenhuma assinatura verificada está vinculada à sua conta. Após contratar, conclua a verificação por e-mail abaixo.',subscription_mismatch:'Os dados da assinatura não correspondem à conta autenticada. Entre em contato com o suporte.',not_entitled:'Não há período gratuito ou pagamento vigente confirmado.',payment_verification_required:'O período gratuito terminou e ainda falta confirmar uma cobrança aprovada.'};
+  const status=String(data.status||'pending').toLowerCase();
+  const labels={not_linked:'Aguardando vinculação',trialing:'Período gratuito',active:'Assinatura ativa',pending:'Pendente',paused:'Pausada',cancelled:'Cancelada',canceled:'Cancelada',inactive:'Inativa',expired:'Expirada',rejected:'Recusada'};
+  label.textContent=labels[status]||'Em verificação';
+  if(status==='not_linked'){
+   detail.textContent='Nenhuma assinatura verificada está vinculada à sua conta. Após contratar, conclua a verificação por e-mail abaixo.';
+   return;
+  }
   detail.textContent=data.access_granted===true
-   ?(status==='trialing'?'Período gratuito reconhecido pelo serviço de assinatura.':'Pagamento reconhecido pelo serviço de assinatura.')+' A proteção dos módulos clínicos ainda está em testes.'
-   :(reasons[data.reason]||'A assinatura ainda não autoriza acesso. O ambiente clínico continua disponível apenas para testes com dados fictícios.');
+   ?(status==='trialing'?'Seu período gratuito foi confirmado pelo servidor.':'Sua assinatura foi confirmada pelo servidor.')
+   :'Não há autorização financeira confirmada neste momento. Se você já contratou, verifique a vinculação da assinatura.';
   const trialDate=subscriptionDate(data.trial_ends_at);
-  if(trialDate){$('subscription-trial-date').textContent='Fim do período gratuito informado: '+trialDate;$('subscription-trial-date').hidden=false;}
+  if(trialDate){const element=$('subscription-trial-date');if(element){element.textContent='Fim do período gratuito: '+trialDate;element.hidden=false;}}
   const renewalDate=subscriptionDate(data.current_period_ends_at);
-  if(renewalDate){$('subscription-renewal-date').textContent='Fim do período pago calculado (sujeito à validação do ciclo de cobrança): '+renewalDate;$('subscription-renewal-date').hidden=false;}
- }catch(e){
-  if(requestNumber===subscriptionRequestNumber){label.textContent='Verificação indisponível';detail.textContent=(e?.message||'Falha temporária.')+' Não é possível afirmar que o pagamento foi confirmado.';}
- }finally{if(requestNumber===subscriptionRequestNumber)button.disabled=false;}
+  if(renewalDate){const element=$('subscription-renewal-date');if(element){element.textContent='Fim do período financeiro confirmado: '+renewalDate;element.hidden=false;}}
+ }catch(error){
+  if(requestNumber===subscriptionRequestNumber){
+   label.textContent='Consulta indisponível';
+   detail.textContent=error?.message||'Não foi possível verificar a assinatura.';
+  }
+ }finally{
+  if(button&&requestNumber===subscriptionRequestNumber)button.disabled=false;
+ }
 }
 $('subscription-refresh').addEventListener('click',async()=>{await refreshSubscriptionStatus();await refreshSubscriptionRequests();});
 
@@ -1076,7 +1087,7 @@ $('subscription-confirm-code').addEventListener('click',async()=>{
  if(subscriptionVerificationBusy||!pendingVerificationId)return;
  const code=$('subscription-code').value.trim();
  const feedback=$('subscription-code-feedback');
- if(!/^\d{6}$/.test(code)){feedback.textContent='Informe os seis dígitos do código.';return;}
+ if(!/^\\d{6}$/.test(code)){feedback.textContent='Informe os seis dígitos do código.';return;}
  subscriptionVerificationBusy=true;$('subscription-confirm-code').disabled=true;
  feedback.textContent='Confirmando código…';
  try{
