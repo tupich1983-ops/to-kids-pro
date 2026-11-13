@@ -899,6 +899,11 @@ ptoiRoot.innerHTML=`
  <div><label for="ptoi-period">Prazo da meta</label><select id="ptoi-period"><option value="curto">Curto prazo</option><option value="medio">Médio prazo</option><option value="longo">Longo prazo</option></select></div></div>
  <div class="ptoi-grid"><div><label for="ptoi-domain">Área ocupacional / domínio</label><select id="ptoi-domain"><option>AVDs e autocuidado</option><option>Brincar e lazer</option><option>Participação escolar</option><option>Participação social</option><option>Motricidade fina e coordenação</option><option>Motricidade global e praxia</option><option>Processamento sensorial e autorregulação</option><option>Alimentação</option><option>Cognição e funções executivas</option><option>Outra área funcional</option></select></div>
  <div><label for="ptoi-targetdate">Data prevista para revisão</label><input id="ptoi-targetdate" type="date"></div></div>
+ <section id="ptoi-evaluation-context" class="history" aria-live="polite" style="background:#f4faf8">
+ <h4 style="margin:0 0 8px">Dados da avaliação para orientar o PTOI</h4>
+ <p class="ptoi-note">Consulta somente leitura. Os achados não geram metas automaticamente; o terapeuta define as prioridades e valida cada decisão.</p>
+ <div id="ptoi-evaluation-summary"></div>
+ </section>
  <label for="ptoi-goal">Meta funcional e observável</label><textarea id="ptoi-goal" rows="2" placeholder="Ex.: realizar 4 de 5 etapas da rotina de vestir com até uma pista verbal, em casa"></textarea>
  <label for="ptoi-baseline">Linha de base / desempenho atual</label><textarea id="ptoi-baseline" rows="2" placeholder="Ex.: realiza 2 de 5 etapas com ajuda física parcial"></textarea>
  <label for="ptoi-criterion">Critério de alcance da meta</label><textarea id="ptoi-criterion" rows="2" placeholder="Ex.: 4/5 etapas em 3 oportunidades consecutivas"></textarea>
@@ -922,8 +927,55 @@ function ptoiSyncPatients(){
  ptoiRender();
 }
 function ptoiRecords(pid){return allRecords.filter(r=>r.paciente_id===pid && (r.conteudo?.formato==='tokids_ptoi_meta_v1'||r.conteudo?.formato==='tokids_ptoi_acompanhamento_v1'))}
+// Correção 31 — Fase 2: ponte de leitura entre avaliações e PTOI.
+function ptoiRenderEvaluationContext(pid){
+ const area=ptoi$('ptoi-evaluation-summary');
+ if(!area)return;
+ area.replaceChildren();
+ if(!pid){area.textContent='Selecione um paciente fictício.';return;}
+ const evaluations=allRecords.filter(r=>r.paciente_id===pid &&
+   (r.conteudo?.formato==='avaliacao_estruturada_v1' ||
+    r.conteudo?.formato==='tokids_avaliacao_completa_v1' ||
+    (r.conteudo?.formato==='tokids_modulo_v1' && r.tipo==='avaliacao')));
+ evaluations.sort((a,b)=>new Date(b.criado_em||0)-new Date(a.criado_em||0));
+ if(!evaluations.length){area.textContent='Ainda não há avaliações integradas salvas para este paciente.';return;}
+ const latest=evaluations[0], content=latest.conteudo||{};
+ const heading=ptoiElement('p');
+ heading.append(ptoiElement('strong','Avaliação mais recente: '),
+   document.createTextNode((latest.titulo||'Avaliação')+' · '+new Date(latest.criado_em).toLocaleDateString('pt-BR')));
+ area.append(heading);
+ const items=[];
+ if(content.formato==='avaliacao_estruturada_v1'){
+  if(content.demanda)items.push(['Demanda principal',content.demanda]);
+  for(const d of content.dominios||[]){
+   if(d.nivel && !['nao_avaliado','nao_observado'].includes(d.nivel))
+    items.push([d.dominio,String(d.nivel).replace(/_/g,' ')]);
+  }
+  if(content.observacoes)items.push(['Observações',content.observacoes]);
+ }else if(content.formato==='tokids_avaliacao_completa_v1'){
+  for(const etapa of content.etapas||[]){
+   for(const field of etapa.campos||[]){
+    if(String(field.valor||'').trim())items.push([etapa.titulo+' — '+field.rotulo,field.valor]);
+   }
+  }
+ }else{
+  for(const [key,value] of Object.entries(content.campos||{})){
+   if(String(value||'').trim())items.push([key.replace(/_/g,' '),value]);
+  }
+ }
+ if(!items.length){area.append(ptoiElement('p','A avaliação não possui achados preenchidos para apresentar.'));return;}
+ const details=ptoiElement('details');details.open=true;
+ details.append(ptoiElement('summary','Consultar '+items.length+' achado(s) registrados'));
+ for(const [label,value] of items){
+  const line=ptoiElement('p');line.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere';
+  line.append(ptoiElement('strong',label+': '),document.createTextNode(String(value)));
+  details.append(line);
+ }
+ area.append(details);
+}
 function ptoiRender(){
  const list=ptoi$('ptoi-list'),pid=ptoi$('ptoi-patient').value;list.replaceChildren();
+ ptoiRenderEvaluationContext(pid);
  if(!pid){list.textContent='Cadastre e selecione um paciente fictício para criar metas.';return}
  const records=ptoiRecords(pid), goals=records.filter(r=>r.conteudo.formato==='tokids_ptoi_meta_v1').slice().reverse();
  if(!goals.length){list.textContent='Nenhuma meta cadastrada para este paciente.';return}
