@@ -177,19 +177,32 @@ $('updatepatient').onclick=async()=>{
 $('patientactivities').onclick=()=>openPage('library');
 $('patientassessment').onclick=()=>openPage('evaluation');
 $('createrecord').onclick=async()=>{
+ const button=$('createrecord');if(button.disabled)return;
  const paciente_id=$('recordpatient').value;
- if(!paciente_id)return msg('Cadastre um paciente fictício antes.',true);
- const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:$('recordtype').value,titulo:$('recordtitle').value.trim(),conteudo:{observacao:$('recordnote').value.trim()}}).select('id').single();if(!error&&!saveConfirmation?.id)return msg('O Supabase não confirmou a gravação. Tente novamente após conferir o histórico.',true);
- if(error)return msg(error.message,true);
- $('recordtitle').value='';$('recordnote').value='';await refreshData();msg('Registro fictício salvo no Supabase.');
+ if(!paciente_id)return msg('Selecione um paciente antes de salvar.',true);
+ button.disabled=true;
+ try{
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:$('recordtype').value,titulo:$('recordtitle').value.trim(),conteudo:{observacao:$('recordnote').value.trim()}}).select('id').single();
+  if(error)throw error;
+  if(!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação. Confira o histórico antes de tentar novamente.');
+  $('recordtitle').value='';$('recordnote').value='';
+  await refreshData();msg('Registro fictício salvo no Supabase.');
+ }catch(error){msg('Não foi possível confirmar o salvamento: '+(error?.message||'erro desconhecido')+'. Confira o histórico antes de repetir.',true)}
+ finally{button.disabled=false}
 };
 $('saveeval').onclick=async()=>{
+ const button=$('saveeval');if(button.disabled)return;
  const paciente_id=$('evalpatient').value;
- if(!paciente_id)return msg('Cadastre um paciente fictício primeiro.',true);
+ if(!paciente_id)return msg('Selecione um paciente antes de salvar.',true);
  const dados={formato:'avaliacao_estruturada_v1',data:$('evaldate').value,demanda:$('evaldemand').value.trim(),observacoes:$('evalnotes').value.trim(),dominios:domains.map((dominio,i)=>({dominio,nivel:$('domain'+i).value}))};
- const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação infantil estruturada — teste',conteudo:dados}).select('id').single();if(!error&&!saveConfirmation?.id)return msg('O Supabase não confirmou a gravação. Tente novamente após conferir o histórico.',true);
- if(error)return msg('Falha ao salvar avaliação: '+error.message,true);
- await refreshData();msg('Avaliação fictícia salva no Supabase.');
+ button.disabled=true;
+ try{
+  const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id,tipo:'avaliacao',titulo:'Avaliação infantil estruturada — teste',conteudo:dados}).select('id').single();
+  if(error)throw error;
+  if(!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação. Confira o histórico antes de tentar novamente.');
+  await refreshData();msg('Avaliação fictícia salva no Supabase.');
+ }catch(error){msg('Não foi possível confirmar o salvamento: '+(error?.message||'erro desconhecido')+'. Confira o histórico antes de repetir.',true)}
+ finally{button.disabled=false}
 };
 
 // Módulos descritivos integrados ao banco de registros clínicos existente.
