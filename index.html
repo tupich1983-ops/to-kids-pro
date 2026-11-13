@@ -1550,4 +1550,67 @@ irSync();
    else alert(message);
  },true);
 })();
+
+// Correção 25: troca de paciente segura nos formulários clínicos (dados fictícios).
+// Nenhuma informação clínica é armazenada fora do Supabase.
+(function installPatientSwitchGuard(){
+ const selectors=['recordpatient','evalpatient','modulepatient','wizardpatient','ptoi-patient','evo-patient','ir-patient'];
+ const drafts={
+  registro:['recordtitle','recordnote'],
+  avaliacao:['evaldemand','evalnotes',...Array.from({length:8},(_,i)=>'domain'+i)],
+  modulo:[],ptoi:['ptoi-goal','ptoi-baseline','ptoi-criterion','ptoi-strategy','ptoi-targetdate'],
+  evolucao:['evo-activities','evo-performance','evo-response','evo-next'],
+  relatorio:['ir-notes']
+ };
+ const dirty=new Set();let internal=false;
+ const areaOf=id=>id.startsWith('m_')?'modulo':id.startsWith('ptoi-')?'ptoi':id.startsWith('evo-')?'evolucao':id==='ir-notes'?'relatorio':id.startsWith('record')?'registro':id.startsWith('eval')||id.startsWith('domain')?'avaliacao':null;
+ const fields=area=>area==='modulo'?Array.from(document.querySelectorAll('#moduleform input,#moduleform textarea')):drafts[area].map(id=>$(id)).filter(Boolean);
+ const hasContent=area=>fields(area).some(el=>{
+  if(el.type==='date'||el.tagName==='SELECT')return false;
+  return !!String(el.value||'').trim();
+ });
+ document.addEventListener('input',e=>{if(internal)return;const area=areaOf(e.target?.id||'');if(area&&hasContent(area))dirty.add(area);},true);
+ function pending(){return ['createrecord','saveeval','wizardfinish','savemodule','ptoi-save','evo-save','ir-save'].some(id=>$(id)?.disabled)}
+ function allowed(next){
+  if(!next||!patientRows.some(p=>p.id===next))return false;
+  if(next===selectedPatientId)return true;
+  if(pending()){alert('Aguarde a conclusão do salvamento antes de trocar de paciente.');return false}
+  const names=[...dirty].filter(hasContent);
+  if(names.length&&!confirm('Há informações não salvas nos formulários ('+names.join(', ')+'). Trocar de paciente descartará esses preenchimentos. Deseja continuar?'))return false;
+  return true;
+ }
+ function resetForms(){
+  internal=true;
+  for(const area of ['registro','avaliacao','ptoi','evolucao'])for(const el of fields(area)){
+   if(el.tagName==='SELECT')el.selectedIndex=0;
+   else if(el.type==='date')el.value='';
+   else el.value='';
+  }
+  // O módulo é reconstruído para eliminar campos do paciente anterior.
+  renderModuleForm();
+  // Observações de relatório são recarregadas pelo irRender do paciente selecionado.
+  dirty.clear();internal=false;
+ }
+ const original=setSelectedPatient;
+ setSelectedPatient=function(id,...args){
+  if(!patientRows.some(p=>p.id===id))return;
+  if(id!==selectedPatientId){if(!allowed(id))return;resetForms()}
+  return original(id,...args);
+ };
+ // Seletores internos também alteram o paciente ativo; impedimos divergência entre módulos.
+ document.addEventListener('change',e=>{
+  const el=e.target;
+  if(internal||!el||!selectors.includes(el.id)||!patientRows.some(p=>p.id===el.value))return;
+  if(el.value===selectedPatientId)return;
+  const previous=selectedPatientId,next=el.value;
+  if(!allowed(next)){
+   internal=true;el.value=previous||'';internal=false;
+   e.stopImmediatePropagation();return;
+  }
+  // Executa os handlers existentes para sincronizar PTOI, evoluções e relatórios.
+  setSelectedPatient(next);
+ },true);
+ // A limpeza do formulário de módulo ocorre somente ao mudar de paciente.
+ // Um refresh normal preserva a seleção e não dispara o descarte de rascunhos.
+})();
 </script></body></html>
