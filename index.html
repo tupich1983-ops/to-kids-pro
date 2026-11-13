@@ -63,7 +63,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 <section><h3>Pacientes fictícios — Supabase</h3><label>Código fictício</label><input id="newcode" placeholder="EX.: TESTE-003"><label>Data de nascimento fictícia</label><input type="date" id="newbirth"><label>Faixa etária (opcional, para cadastros sem data)</label><input id="newage" placeholder="Ex.: 4 anos ou 6 meses"><label>Diagnóstico informado (opcional)</label><select id="newdiagnosis"><option value="">Sem diagnóstico informado</option><option>TEA</option><option>TDAH</option><option>Paralisia cerebral</option><option>Síndrome de Down</option><option>Deficiência intelectual</option><option>Atraso do desenvolvimento</option><option>Outro</option></select><label>Outro diagnóstico / condições associadas (opcional)</label><input id="newdiagnosisother" placeholder="Descrição fictícia"><label>Situação diagnóstica</label><select id="newdiagnosisstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="createpatient">Salvar paciente no Supabase</button><button id="refresh" class="secondary">Atualizar lista</button><p id="patientfeedback" role="status"></p><h4>Pacientes cadastrados — clique para abrir</h4><div id="patientlist"></div><article id="patientprofile" class="history" hidden><h3 id="selectedname"></h3><p id="selectedmeta"></p><label>Atualizar data de nascimento fictícia</label><input type="date" id="editbirth"><label>Diagnóstico informado</label><input id="editdiagnosis" placeholder="Opcional"><label>Situação diagnóstica</label><select id="editstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="updatepatient" type="button">Atualizar cadastro</button><h4>Histórico do paciente</h4><div id="patienthistory"></div><h4>Sugestões iniciais por faixa etária</h4><div id="patientrecommendations"></div><p class="note">Sugestões educativas por idade, não prescrições. Considere avaliação individual e preferências da criança.</p><button id="patientactivities" type="button">Abrir biblioteca de atividades</button><button id="patientassessment" type="button" class="secondary">Abrir avaliação completa</button></article></section>
 <section><h3>Registro clínico fictício — Supabase</h3><label>Paciente</label><select id="recordpatient"></select><label>Tipo</label><select id="recordtype"><option value="avaliacao">Avaliação</option><option value="evolucao">Evolução</option><option value="plano_terapeutico">Plano terapêutico</option><option value="seletividade_alimentar">Seletividade alimentar</option><option value="desenvolvimento_sensoriomotor">Desenvolvimento sensoriomotor</option></select><label>Título</label><input id="recordtitle" placeholder="Registro fictício"><label>Observação</label><input id="recordnote" placeholder="Somente dados fictícios"><button id="createrecord">Salvar registro no Supabase</button><div id="recordlist"></div></section>
 <section><h3>Avaliação infantil estruturada — Supabase (teste)</h3><p class="note">Formulário inicial de oito domínios, não padronizado. Não substitui instrumentos validados nem avaliação clínica.</p><label>Paciente fictício</label><select id="evalpatient"></select><label>Data da avaliação</label><input type="date" id="evaldate"><label>Demanda principal (fictícia)</label><input id="evaldemand" placeholder="Ex.: participação em brincadeiras"><div id="evaldomains"></div><label>Observações e contexto funcional</label><textarea id="evalnotes" rows="3" placeholder="Somente dados fictícios"></textarea><button id="saveeval">Salvar avaliação no Supabase</button><h4>Avaliações salvas no Supabase</h4><div id="evallist"></div></section>
-<section id="wizard"><span id="wizardpanel"></span><h3>Avaliação pediátrica completa — por etapas (teste 6.9.1)</h3><p class="note">Formulário clínico descritivo não padronizado. Salve o rascunho neste dispositivo ou conclua para registrar no Supabase. Use somente pacientes fictícios.</p><label>Paciente fictício</label><select id="wizardpatient"></select><div id="wizardprogress" role="status"></div><div id="wizardform"></div><button class="secondary" id="wizardprev">Voltar</button><button class="secondary" id="wizardnext">Próxima etapa</button><button class="secondary" id="wizarddraft">Salvar rascunho neste dispositivo</button><button id="wizardfinish">Concluir e salvar no Supabase</button><button id="wizardcancel" type="button" class="secondary" hidden>Cancelar edição e criar nova avaliação</button><p id="wizardstatus" role="status"></p><h4>Avaliações completas já salvas</h4><div id="wizardhistory"></div></section>
+<section id="wizard"><span id="wizardpanel"></span><h3>Avaliação pediátrica completa — por etapas (teste 6.9.1)</h3><p class="note">Formulário clínico descritivo não padronizado. O rascunho fica apenas na memória enquanto esta página estiver aberta; para preservar a avaliação, conclua e salve no Supabase. Use somente pacientes fictícios.</p><label>Paciente fictício</label><select id="wizardpatient"></select><div id="wizardprogress" role="status"></div><div id="wizardform"></div><button class="secondary" id="wizardprev">Voltar</button><button class="secondary" id="wizardnext">Próxima etapa</button><button class="secondary" id="wizarddraft">Guardar rascunho temporário</button><button id="wizardfinish">Concluir e salvar no Supabase</button><button id="wizardcancel" type="button" class="secondary" hidden>Cancelar edição e criar nova avaliação</button><p id="wizardstatus" role="status"></p><h4>Avaliações completas já salvas</h4><div id="wizardhistory"></div></section>
 <section id="clinical"><h3>Central clínica integrada — versão de teste</h3><p class="note">Formulários clínicos descritivos, não padronizados. Não fazem diagnóstico automático. Use exclusivamente códigos e dados fictícios.</p><label>Paciente fictício</label><select id="modulepatient"></select><label>Módulo</label><select id="moduletype"></select><div id="moduleform"></div><button id="savemodule">Salvar módulo no Supabase</button><button id="clearform" class="secondary">Limpar formulário</button><h4>Histórico clínico deste paciente</h4><div id="modulehistory"></div><button id="printreport" class="secondary">Imprimir / salvar relatório PDF</button></section>
 </section></main><script type="module">
 import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
@@ -204,16 +204,39 @@ const wizardSteps=[
 ];
 let wizardStep=0,wizardValues={},wizardPatient='',wizardEditingId=null;
 const wizardDraftKey=pid=>'tokids_wizard_draft_'+pid;
+const wizardDrafts=new Map();
+let wizardDraftOwner=null;
+function wizardClearDrafts(){wizardDrafts.clear();wizardDraftOwner=null;wizardValues={};wizardStep=0;wizardPatient='';}
+function wizardSetOwner(uid){if(wizardDraftOwner!==uid){wizardDrafts.clear();wizardDraftOwner=uid;}}
 function wizardRead(){const section=wizardSteps[wizardStep];for(const [key] of section.fields){const el=$('w_'+wizardStep+'_'+key);if(el)wizardValues[wizardStep+'_'+key]=el.value}}
 function wizardRender(){const step=wizardSteps[wizardStep],area=$('wizardform');area.replaceChildren();const h=document.createElement('h4');h.textContent=step.title;area.append(h);$('wizardprogress').textContent='Etapa '+(wizardStep+1)+' de '+wizardSteps.length;
  for(const [key,label] of step.fields){const l=document.createElement('label');l.textContent=label;const el=document.createElement('textarea');el.rows=3;el.id='w_'+wizardStep+'_'+key;el.value=wizardValues[wizardStep+'_'+key]||'';el.placeholder='Descreva observações fictícias';el.addEventListener('input',()=>{wizardValues[wizardStep+'_'+key]=el.value});area.append(l,el)}
  $('wizardprev').disabled=wizardStep===0;$('wizardnext').disabled=wizardStep===wizardSteps.length-1;
  $('wizardstatus').textContent='';}
-function wizardSwitch(){wizardEditingId=null;$('wizardfinish').textContent='Concluir e salvar no Supabase';$('wizardcancel').hidden=true;wizardValues={};wizardStep=0;wizardPatient=$('wizardpatient').value;try{const raw=localStorage.getItem(wizardDraftKey(wizardPatient));if(raw){const obj=JSON.parse(raw);if(obj&&obj.values&&typeof obj.values==='object'){wizardValues=obj.values;wizardStep=Math.max(0,Math.min(wizardSteps.length-1,Number(obj.step)||0));$('wizardstatus').textContent='Rascunho local recuperado.'}}}catch(e){$('wizardstatus').textContent='Rascunho local não pôde ser lido.'}wizardRender();renderWizardHistory()}
+function wizardSwitch(){
+ if(wizardPatient&&!wizardEditingId&&Object.values(wizardValues).some(v=>String(v).trim()))wizardDrafts.set(wizardPatient,{step:wizardStep,values:{...wizardValues}});
+ wizardEditingId=null;$('wizardfinish').textContent='Concluir e salvar no Supabase';$('wizardcancel').hidden=true;
+ wizardValues={};wizardStep=0;wizardPatient=$('wizardpatient').value;
+ if(wizardPatient){
+  let draft=wizardDrafts.get(wizardPatient);
+  // Migração única do formato antigo, eliminando a cópia persistente.
+  try{
+   const key=wizardDraftKey(wizardPatient);
+   const raw=localStorage.getItem(key);
+   if(raw){
+    if(!draft){const old=JSON.parse(raw);if(old&&old.values&&typeof old.values==='object')draft={step:old.step,values:old.values};}
+    localStorage.removeItem(key);
+   }
+  }catch(e){console.warn('Não foi possível migrar um rascunho antigo.');}
+  if(draft){wizardValues={...draft.values};wizardStep=Math.max(0,Math.min(wizardSteps.length-1,Number(draft.step)||0));wizardDrafts.set(wizardPatient,{step:wizardStep,values:{...wizardValues}});}
+ }
+ wizardRender();renderWizardHistory();
+ if(wizardPatient&&wizardDrafts.has(wizardPatient))$('wizardstatus').textContent='Rascunho temporário recuperado. Salve a avaliação no Supabase antes de fechar a página.';
+}
 $('wizardpatient').onchange=wizardSwitch;
 $('wizardprev').onclick=()=>{wizardRead();if(wizardStep>0)wizardStep--;wizardRender()};
 $('wizardnext').onclick=()=>{wizardRead();if(wizardStep<wizardSteps.length-1)wizardStep++;wizardRender()};
-$('wizarddraft').onclick=()=>{wizardRead();if(!wizardPatient)return $('wizardstatus').textContent='Selecione um paciente fictício.';try{localStorage.setItem(wizardDraftKey(wizardPatient),JSON.stringify({step:wizardStep,values:wizardValues}));$('wizardstatus').textContent='Rascunho salvo somente neste navegador (não sincronizado).'}catch(e){$('wizardstatus').textContent='Não foi possível salvar rascunho local.'}};
+$('wizarddraft').onclick=()=>{wizardRead();if(!wizardPatient)return $('wizardstatus').textContent='Selecione um paciente fictício.';wizardDrafts.set(wizardPatient,{step:wizardStep,values:{...wizardValues}});$('wizardstatus').textContent='Rascunho guardado apenas enquanto esta página estiver aberta. Para não perdê-lo, conclua e salve no Supabase.';};
 function wizardBeginEdit(id){
  const r=allRecords.find(x=>x.id===id&&x.paciente_id===$('wizardpatient').value&&x.conteudo?.formato==='tokids_avaliacao_completa_v1');
  if(!r)return $('wizardstatus').textContent='Avaliação não encontrada para este paciente.';
@@ -255,7 +278,7 @@ $('wizardfinish').onclick=async()=>{
    if(error)throw error;
   }
   const edited=!!wizardEditingId;
-  if(!edited)localStorage.removeItem(wizardDraftKey(paciente_id));
+  if(!edited){wizardDrafts.delete(paciente_id);try{localStorage.removeItem(wizardDraftKey(paciente_id))}catch(e){}}
   wizardEditingId=null;wizardValues={};wizardStep=0;
   $('wizardfinish').textContent='Concluir e salvar no Supabase';$('wizardcancel').hidden=true;
   await refreshData();wizardRender();
@@ -369,7 +392,7 @@ $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('librar
 
 $('refresh').onclick=refreshData;
 function msg(t,error=false){$('status').textContent=t;$('status').className=error?'err':''}
-async function display(session){if(session){profileFromUser(session.user);void loadProfessionalProfile();void refreshSubscriptionStatus();void refreshSubscriptionRequests();$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src');resetSubscriptionStatus()}}
+async function display(session){if(session){wizardSetOwner(session.user.id);profileFromUser(session.user);void loadProfessionalProfile();void refreshSubscriptionStatus();void refreshSubscriptionRequests();$('gate').hidden=true;$('app').hidden=false;$('who').textContent=session.user.email; if(!$('frame').getAttribute('src'))$('frame').src='painel.html'; await refreshData();wizardSwitch()}else{wizardClearDrafts();$('gate').hidden=false;$('app').hidden=true;$('frame').removeAttribute('src');resetSubscriptionStatus()}}
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
 // Fluxo oficial Supabase Auth: solicita link, valida a sessão de recuperação e troca a senha.
