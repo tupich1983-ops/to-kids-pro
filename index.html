@@ -1607,4 +1607,51 @@ irSync();
  // A limpeza do formulário de módulo ocorre somente ao mudar de paciente.
  // Um refresh normal preserva a seleção e não dispara o descarte de rascunhos.
 })();
+
+// Correção 27: recuperação assistida após perda de conectividade.
+// Não reenviar INSERT/UPDATE automaticamente: uma resposta perdida pode ter
+// ocorrido após o Supabase gravar, e repetir a operação criaria duplicatas.
+(function installConnectionRecovery(){
+ const banner=document.createElement('div');
+ banner.id='connection-recovery-banner';
+ banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');
+ banner.style.cssText='position:sticky;top:0;z-index:100;background:#fff2d6;color:#61471b;border:1px solid #d9b875;border-radius:10px;padding:12px 15px;margin:8px 0;display:none;align-items:center;gap:10px;flex-wrap:wrap';
+ const notice=document.createElement('span');notice.style.flex='1 1 260px';
+ const retry=document.createElement('button');retry.type='button';retry.className='secondary';retry.textContent='Conferir registros no Supabase';retry.style.margin='0';
+ banner.append(notice,retry);
+ const app=$('app');if(app)app.insertAdjacentElement('afterbegin',banner);
+ let interrupted=false;
+ function show(message,showRetry){
+  banner.style.display='flex';notice.textContent=message;retry.hidden=!showRetry;
+ }
+ function update(){
+  if(navigator.onLine===false){
+   interrupted=true;
+   show('Sem conexão. Mantenha os formulários abertos. Não repita um salvamento cuja confirmação não apareceu.',false);
+  }else if(interrupted){
+   show('Conexão restabelecida. Antes de salvar novamente, confira se o registro já consta no Supabase para evitar duplicações.',true);
+  }else{banner.style.display='none'}
+ }
+ window.addEventListener('offline',update);
+ window.addEventListener('online',update);
+ retry.addEventListener('click',async()=>{
+  if(!client||!clinicalSessionOwner){show('Entre em sua conta antes de conferir os registros.',true);return}
+  if(navigator.onLine===false){update();return}
+  retry.disabled=true;notice.textContent='Consultando os registros autorizados no Supabase...';
+  try{
+   // Conferência somente de leitura. A recuperação nunca reenvia salvamentos.
+   const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
+   const {data:auth,error:authError}=await client.auth.getUser();
+   if(authError||!auth?.user||auth.user.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('Sessão não confirmada. Faça login novamente.');
+   const {error:checkError}=await client.from('registros_clinicos').select('id',{head:true,count:'exact'}).limit(1);
+   if(checkError)throw checkError;
+   await refreshData();
+   if(!clinicalSessionMatches(owner,epoch))throw Error('A conta foi alterada durante a conferência.');
+   interrupted=false;
+   show('Conexão confirmada. Confira o histórico do paciente antes de repetir qualquer salvamento não confirmado.',false);
+  }catch(e){show('Não foi possível confirmar a sincronização: '+(e?.message||'erro de conexão')+'. Mantenha os rascunhos e tente conferir novamente.',true)}
+  finally{retry.disabled=false}
+ });
+ update();
+})();
 </script></body></html>
