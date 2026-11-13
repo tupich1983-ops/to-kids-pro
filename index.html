@@ -158,21 +158,40 @@ async function refreshData(){
   const el=document.createElement('article');el.className='history';const title=document.createElement('strong');title.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.conteudo.data||'')+' · '+clean(r.titulo);el.append(title);$('evallist').append(el)
  }
 }
+// Correção 20: cadastro de paciente com confirmação de gravação e proteção contra envio duplo.
 $('createpatient').onclick=async()=>{
- if(!client)return;
+ const button=$('createpatient');if(button.disabled||!client)return;
  const code=$('newcode').value.trim().toUpperCase(),age=$('newage').value.trim(),birth=$('newbirth').value||null;
  if(!/^[A-Z0-9_-]{2,40}$/.test(code))return msg('Use um código fictício de 2 a 40 caracteres.',true);
  if(!birth&&!age)return msg('Informe a data de nascimento fictícia ou uma idade.',true);
  const diagnosis=$('newdiagnosis').value==='Outro'?$('newdiagnosisother').value.trim():$('newdiagnosis').value;
- const {data,error}=await client.from('pacientes').insert({nome:code,data_nascimento:birth,dados:{faixa_etaria:age,diagnostico:diagnosis,situacao_diagnostica:$('newdiagnosisstatus').value}}).select('id').single();
- if(error)return msg('Erro ao cadastrar: '+error.message,true);
- $('newcode').value='';$('newage').value='';$('newbirth').value='';await refreshData();if(data?.id)setSelectedPatient(data.id);msg('Paciente fictício cadastrado.');
+ button.disabled=true;
+ try{
+  const {data,error}=await client.from('pacientes').insert({nome:code,data_nascimento:birth,dados:{faixa_etaria:age,diagnostico:diagnosis,situacao_diagnostica:$('newdiagnosisstatus').value}}).select('id').single();
+  if(error)throw error;
+  if(!data?.id)throw Error('O Supabase não confirmou o cadastro.');
+  $('newcode').value='';$('newage').value='';$('newbirth').value='';
+  const savedMessage='Paciente fictício cadastrado no Supabase.';msg(savedMessage);
+  try{await refreshData();if(patientRows.some(p=>p.id===data.id))setSelectedPatient(data.id);msg(savedMessage)}
+  catch(refreshError){console.warn('Paciente cadastrado, mas a atualização da lista falhou:',refreshError);msg(savedMessage+' A lista não pôde ser atualizada. NÃO cadastre novamente; use Atualizar lista quando a conexão voltar.');}
+ }catch(error){msg('Não foi possível confirmar o cadastro: '+(error?.message||'erro desconhecido')+'. Confira a lista antes de tentar novamente.',true)}
+ finally{button.disabled=false}
 };
+// Correção 20: atualização de cadastro com confirmação independente da lista.
 $('updatepatient').onclick=async()=>{
+ const button=$('updatepatient');if(button.disabled||!client)return;
  const p=patientRows.find(x=>x.id===selectedPatientId);if(!p)return;
  const dados={...p.dados,diagnostico:$('editdiagnosis').value.trim(),situacao_diagnostica:$('editstatus').value};
- const {error}=await client.from('pacientes').update({data_nascimento:$('editbirth').value||null,dados}).eq('id',p.id);
- if(error)return msg('Erro ao atualizar: '+error.message,true);await refreshData();msg('Cadastro fictício atualizado.');
+ button.disabled=true;
+ try{
+  const {data,error}=await client.from('pacientes').update({data_nascimento:$('editbirth').value||null,dados}).eq('id',p.id).select('id');
+  if(error)throw error;
+  if(!data?.some(row=>row.id===p.id))throw Error('O Supabase não confirmou a atualização. Verifique as permissões (RLS).');
+  const savedMessage='Cadastro fictício atualizado no Supabase.';msg(savedMessage);
+  try{await refreshData();msg(savedMessage)}
+  catch(refreshError){console.warn('Cadastro atualizado, mas a lista falhou:',refreshError);msg(savedMessage+' A lista não pôde ser atualizada; tente Atualizar lista mais tarde.');}
+ }catch(error){msg('Não foi possível confirmar a atualização: '+(error?.message||'erro desconhecido')+'. Confira o cadastro antes de repetir.',true)}
+ finally{button.disabled=false}
 };
 $('patientactivities').onclick=()=>openPage('library');
 $('patientassessment').onclick=()=>openPage('evaluation');
