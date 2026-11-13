@@ -1225,6 +1225,22 @@ function ptoiRender(){
   // Correção 37: revisões clínicas independentes, preservando a meta e o histórico.
   const reviews=allRecords.filter(r=>r.paciente_id===pid && r.conteudo?.formato==='tokids_ptoi_revisao_v1' && r.conteudo.meta_id===d.meta_id)
    .slice().sort((a,b)=>String(b.conteudo?.data||'').localeCompare(String(a.conteudo?.data||''))||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0));
+  // Correção 38: situação da meta baseada exclusivamente na última revisão profissional.
+  // Sem revisão, não inferir conclusão a partir de acompanhamentos ou evoluções.
+  const latestReview=reviews[0]?.conteudo||null;
+  const reviewStates={'Manter meta':'Meta mantida','Ajustar meta':'Meta em ajuste','Concluir meta':'Meta concluída'};
+  const currentReviewState=latestReview?(reviewStates[latestReview.decisao]||'Decisão não reconhecida'):'Meta em acompanhamento';
+  const statusPanel=ptoiElement('div');statusPanel.className='ptoi-goal-review-status';
+  statusPanel.style.cssText='margin:12px 0;padding:11px 13px;border:1px solid #b7d9d0;border-left:4px solid #147d71;border-radius:9px;background:#f4faf8';
+  statusPanel.setAttribute('aria-label','Situação atual da meta segundo revisões terapêuticas');
+  const statusTitle=ptoiElement('p');statusTitle.style.cssText='margin:0 0 5px';
+  statusTitle.append(ptoiElement('strong','Situação da meta: '),document.createTextNode(currentReviewState));statusPanel.append(statusTitle);
+  if(latestReview){
+   const validDate=/^\d{4}-\d{2}-\d{2}$/.test(String(latestReview.data||''));
+   statusPanel.append(ptoiElement('p','Última revisão: '+(validDate?ptoiDate(latestReview.data):'Data não informada')+' · Decisão: '+ptoiSafe(latestReview.decisao),'ptoi-note'));
+  }else statusPanel.append(ptoiElement('p','Nenhuma revisão terapêutica registrada. A meta permanece em acompanhamento.','ptoi-note'));
+  statusPanel.append(ptoiElement('p','Situação informativa baseada na decisão profissional; não altera a meta, não encerra atendimentos e não avalia resultados automaticamente.','ptoi-note'));
+  card.append(statusPanel);
   const reviewBox=ptoiElement('section');reviewBox.className='history ptoi-review';
   reviewBox.style.cssText='background:#f8fcfa;border:1px solid #b7d9d0;padding:12px;margin:12px 0;border-radius:10px';
   reviewBox.append(ptoiElement('h4','Revisão terapêutica da meta'));
