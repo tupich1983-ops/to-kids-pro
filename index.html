@@ -1922,7 +1922,45 @@ function irBuild(target,records,patient,notes){
  irElement('p','Espaço para assinatura manual ou assinatura eletrônica válida; o sistema não assina automaticamente.',sign,'ir-disclaimer');
  irElement('p','DOCUMENTO FICTÍCIO — ambiente de testes. Não utilizar como laudo ou prontuário real.',target,'ir-disclaimer');
 }
-function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes)}
+// Correção 40 — Fase 3: indicadores descritivos, sem inferência de eficácia clínica.
+const results40=document.createElement('section');
+results40.id='results40';results40.style.cssText='border:1px solid #b7d9d0;border-radius:12px;padding:14px;margin:12px 0;background:#f8fcfa';
+results40.setAttribute('aria-label','Painel de indicadores do paciente');
+ir('ir-preview').before(results40);
+function results40Render(){
+ const box=results40;box.replaceChildren();
+ const pid=ir('ir-patient').value;
+ const h=document.createElement('h4');h.textContent='Indicadores de acompanhamento — Fase 3';box.append(h);
+ const note=document.createElement('p');note.className='ptoi-note';note.textContent='Contagem de registros e decisões profissionais, não medidas de melhora ou eficácia terapêutica.';box.append(note);
+ if(!pid||!patientRows.some(p=>p.id===pid)){const empty=document.createElement('p');empty.textContent='Selecione um paciente fictício para consultar os indicadores.';box.append(empty);return}
+ const rs=allRecords.filter(r=>r.paciente_id===pid),format=r=>r.conteudo?.formato;
+ const goals=rs.filter(r=>format(r)==='tokids_ptoi_meta_v1');
+ const evolutions=rs.filter(r=>format(r)==='tokids_evolucao_ptoi_v1');
+ const reviews=rs.filter(r=>format(r)==='tokids_ptoi_revisao_v1');
+ const latestReviews=new Map();
+ for(const r of reviews.slice().sort((a,b)=>String(b.conteudo?.data||'').localeCompare(String(a.conteudo?.data||''))||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0))){
+  const id=r.conteudo?.meta_id;if(id&&!latestReviews.has(id))latestReviews.set(id,r.conteudo);
+ }
+ const states=[['Em acompanhamento',0],['Mantidas',0],['Em ajuste',0],['Concluídas',0]];
+ for(const goal of goals){const decision=latestReviews.get(goal.conteudo?.meta_id)?.decisao;
+  const index=decision==='Manter meta'?1:decision==='Ajustar meta'?2:decision==='Concluir meta'?3:0;states[index][1]++;
+ }
+ const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:12px 0';
+ for(const [label,value] of [['Metas',goals.length],['Evoluções vinculadas',evolutions.length],['Revisões registradas',reviews.length]]){
+  const tile=document.createElement('div');tile.style.cssText='padding:10px;background:white;border:1px solid #d4e5de;border-radius:8px';
+  const num=document.createElement('strong');num.textContent=String(value);num.style.cssText='display:block;font-size:24px;color:#147d71';
+  const name=document.createElement('span');name.textContent=label;tile.append(num,name);grid.append(tile);
+ }box.append(grid);
+ const subtitle=document.createElement('strong');subtitle.textContent='Situação das metas conforme última revisão';box.append(subtitle);
+ const max=Math.max(1,goals.length);
+ for(const [label,value] of states){const line=document.createElement('div');line.style.margin='9px 0';
+  const caption=document.createElement('div');caption.textContent=label+' · '+value;caption.style.fontSize='13px';line.append(caption);
+  const track=document.createElement('div');track.style.cssText='height:12px;border-radius:7px;background:#e1eeea;overflow:hidden';
+  const fill=document.createElement('div');fill.style.cssText='height:100%;background:#147d71;width:'+((value/max)*100)+'%';track.append(fill);line.append(track);box.append(line);
+ }
+ const small=document.createElement('p');small.className='ptoi-note';small.textContent='Cada barra representa a quantidade de metas nessa situação. A ausência de registros não indica ausência de atendimento ou progresso.';box.append(small);
+}
+function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render()}
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
 ir('ir-patient').onchange=irRender;
 ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
