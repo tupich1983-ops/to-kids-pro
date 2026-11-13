@@ -1172,6 +1172,32 @@ function ptoiRender(){
   card.append(ptoiElement('p','Situação atual: '+(latest?latest.conteudo.estado:'Ainda não acompanhada'),'ptoi-note'));
   if(progress.length){const det=ptoiElement('details');det.append(ptoiElement('summary','Ver histórico ('+progress.length+')'));
    for(const r of progress){const x=r.conteudo;const p=ptoiElement('p');p.append(ptoiElement('strong',ptoiDate(x.data)+' · '+x.estado+' — '),document.createTextNode(ptoiSafe(x.medida)+' · '+ptoiSafe(x.observacao)));det.append(p)}card.append(det)}
+  // Correção 35: linha do tempo clínica da meta, sem alterar os registros originais.
+  // Reúne acompanhamentos PTOI e evoluções de sessão pelo mesmo meta_id.
+  const events=allRecords.filter(r=>r.paciente_id===pid && r.conteudo?.meta_id===d.meta_id &&
+   ['tokids_ptoi_acompanhamento_v1','tokids_evolucao_ptoi_v1'].includes(r.conteudo?.formato))
+   .slice().sort((a,b)=>{
+    const dateA=String(a.conteudo?.data||'');const dateB=String(b.conteudo?.data||'');
+    return dateB.localeCompare(dateA)||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0);
+   });
+  const timeline=ptoiElement('details');timeline.className='history ptoi-timeline';
+  timeline.style.cssText='margin:12px 0;padding:12px;background:#f4faf8;border:1px solid #c8e1dc;border-radius:10px';
+  timeline.append(ptoiElement('summary','Linha do tempo clínica — '+events.length+' registro(s)'));
+  const timelineInfo=ptoiElement('p','Registros em ordem de data da sessão/observação (mais recentes primeiro). Histórico de consulta, sem alterações automáticas.','ptoi-note');
+  timeline.append(timelineInfo);
+  if(!events.length)timeline.append(ptoiElement('p','Nenhum acompanhamento ou evolução vinculado a esta meta.'));
+  for(const event of events){
+   const x=event.conteudo||{},isEvolution=x.formato==='tokids_evolucao_ptoi_v1';
+   const item=ptoiElement('article');item.className='history';item.style.cssText='background:white;padding:10px;margin:9px 0';
+   const day=/^\d{4}-\d{2}-\d{2}$/.test(x.data||'')?ptoiDate(x.data):'Data não informada';
+   item.append(ptoiElement('strong',day+' · '+(isEvolution?'Evolução clínica':'Acompanhamento da meta')));
+   const fields=isEvolution?
+    [['Situação',x.estado],['Desempenho funcional',x.medida],['Atividades realizadas',x.atividades],['Resposta observada',x.resposta],['Próximos passos',x.proximos]]:
+    [['Situação',x.estado],['Medida observada',x.medida],['Observação',x.observacao]];
+   for(const [label,value] of fields){if(!ptoiSafe(value))continue;const line=ptoiElement('p');line.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0';line.append(ptoiElement('strong',label+': '),document.createTextNode(ptoiSafe(value)));item.append(line)}
+   timeline.append(item);
+  }
+  card.append(timeline);
   const wrap=ptoiElement('div',undefined,'ptoi-grid');
   const a=ptoiElement('div'),b=ptoiElement('div');
   const la=ptoiElement('label','Estado da meta'),state=ptoiElement('select');
@@ -1372,16 +1398,8 @@ setSelectedPatient=function(...args){const out=evoPreviousSetPatient(...args);if
 // O histórico do PTOI também reconhece evoluções vinculadas à mesma meta.
 const ptoiOriginalRecords=ptoiRecords;
 ptoiRecords=function(pid){return allRecords.filter(r=>r.paciente_id===pid&&['tokids_ptoi_meta_v1','tokids_ptoi_acompanhamento_v1','tokids_evolucao_ptoi_v1'].includes(r.conteudo?.formato))};
-// Renderização do histórico existente: evolução vinculada aparece como acompanhamento da meta.
-const ptoiOriginalRender=ptoiRender;
-ptoiRender=function(){
- const pid=ptoi$('ptoi-patient').value;
- const linked=allRecords.filter(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_evolucao_ptoi_v1');
- // Adaptador apenas de visualização, sem escrever registros duplicados no banco.
- const original=allRecords;
- try{allRecords=original.concat(linked.map(r=>({...r,conteudo:{...r.conteudo,formato:'tokids_ptoi_acompanhamento_v1',observacao:[r.conteudo.resposta,r.conteudo.proximos].filter(Boolean).join(' · ')}})));ptoiOriginalRender()}
- finally{allRecords=original}
-};
+// Correção 35: a linha do tempo do PTOI lê os registros reais diretamente.
+// Não é mais necessário duplicar evoluções temporariamente como acompanhamentos.
 evoSync();
 
 // Perfil profissional por usuário: armazenado no Supabase Auth (user_metadata), sem tabelas novas.
