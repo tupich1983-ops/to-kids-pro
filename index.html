@@ -1801,6 +1801,9 @@ unifiedReportHelp.className='note';
 unifiedReportHelp.textContent='Este é o relatório único do paciente. Para criar ou editar planos terapêuticos e evoluções, utilize os módulos Planejar sessões e Evoluções clínicas. Os registros anteriores permanecem preservados no Supabase e são consultados aqui.';
 integratedReport.insertBefore(unifiedReportHelp,integratedReport.children[1]);
 const ir=id=>document.getElementById(id);
+const report43Style=document.createElement('style');
+report43Style.textContent='#ir-preview .ir-report-review{margin:8px 0;padding:9px 12px;border-left:3px solid #72aa9c;background:#f4faf8;border-radius:4px}#ir-preview .ir-report-review p{margin:4px 0}';
+document.head.append(report43Style);
 const irFormats={assessment:['tokids_avaliacao_completa_v1','avaliacao_estruturada_v1'],goal:'tokids_ptoi_meta_v1',tracking:'tokids_ptoi_acompanhamento_v1',evolution:'tokids_evolucao_ptoi_v1',notes:'tokids_relatorio_observacoes_v1'};
 const irText=value=>String(value??'').replace(/\\n/g,'\n');
 function irElement(tag,text,parent,cls){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined&&text!==null)el.textContent=irText(text);if(parent)parent.append(el);return el}
@@ -1883,9 +1886,26 @@ function irBuild(target,records,patient,notes){
  const goals=records.filter(r=>r.conteudo?.formato===irFormats.goal);
  const tracks=records.filter(r=>r.conteudo?.formato===irFormats.tracking);
  const evolutions=records.filter(r=>r.conteudo?.formato===irFormats.evolution);
+ const reviews=records.filter(r=>r.conteudo?.formato==='tokids_ptoi_revisao_v1');
+ const reviewByGoal=new Map();
+ for(const r of reviews){const id=r.conteudo?.meta_id;if(!id)continue;const list=reviewByGoal.get(id)||[];list.push(r);reviewByGoal.set(id,list)}
+ for(const list of reviewByGoal.values())list.sort((a,b)=>String(b.conteudo?.data||'').localeCompare(String(a.conteudo?.data||''))||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0));
  const legacyPlans=records.filter(r=>r.tipo==='plano_terapeutico'&&r.conteudo?.formato==='tokids_modulo_v1');
  const legacyEvos=records.filter(r=>r.tipo==='evolucao'&&r.conteudo?.formato==='tokids_modulo_v1');
  function section(title){return irElement('h4',title,target,'ir-section-title')}
+ section('Resumo documental do acompanhamento');
+ irLine(target,'Avaliações identificadas',String(assessments.length));
+ irLine(target,'Metas cadastradas no PTOI',String(goals.length));
+ irLine(target,'Evoluções vinculadas ao PTOI',String(evolutions.length));
+ irLine(target,'Acompanhamentos de metas',String(tracks.length));
+ irLine(target,'Revisões terapêuticas',String(reviews.length));
+ const states={'Manter meta':0,'Ajustar meta':0,'Concluir meta':0};let withoutReview=0;
+ for(const g of goals){const last=reviewByGoal.get(g.conteudo?.meta_id)?.[0]?.conteudo;if(last&&Object.hasOwn(states,last.decisao))states[last.decisao]++;else withoutReview++}
+ irLine(target,'Metas sem decisão de revisão reconhecida',String(withoutReview));
+ irLine(target,'Metas mantidas na última revisão',String(states['Manter meta']));
+ irLine(target,'Metas em ajuste na última revisão',String(states['Ajustar meta']));
+ irLine(target,'Metas concluídas na última revisão',String(states['Concluir meta']));
+ irElement('p','Os indicadores são contagens de registros e decisões documentadas, não escores de desempenho, melhora clínica ou eficácia da intervenção.',target,'ir-review-note');
  section('1. Avaliações e informações funcionais');
  if(!assessments.length)irElement('p','Nenhuma avaliação estruturada encontrada.',target);
  for(const r of assessments){const box=irElement('div',null,target,'history');irElement('strong',(r.titulo||'Avaliação')+' · '+irDate(r),box);const c=r.conteudo||{};
@@ -1896,7 +1916,17 @@ function irBuild(target,records,patient,notes){
  }
  section('2. Metas do PTOI e acompanhamento');
  if(!goals.length&&!legacyPlans.length)irElement('p','Nenhum plano ou meta cadastrada.',target);
- for(const g of goals){const c=g.conteudo,box=irElement('div',null,target,'history');irElement('h5',irDeadline(c.prazo)+' · '+(c.area||'Área não informada'),box);irGoalFields(box,c);
+ for(const g of goals){const c=g.conteudo,box=irElement('div',null,target,'history');irElement('h5',irDeadline(c.prazo)+' · '+(c.area||'Área não informada'),box); irGoalFields(box,c);
+ const goalReviews=reviewByGoal.get(c.meta_id)||[];
+ if(goalReviews.length){
+  irElement('h5','Revisões terapêuticas da meta',box);
+  for(const review of goalReviews){const d=review.conteudo||{};const item=irElement('div',null,box,'ir-report-review');
+   irLine(item,'Data da revisão',irDateBR(d.data||review.criado_em));
+   irLine(item,'Decisão profissional',d.decisao||'Não informada');
+   irLine(item,'Justificativa',d.justificativa);
+   irLine(item,'Conduta registrada',d.conduta);
+  }
+ }else irElement('p','Nenhuma revisão terapêutica registrada para esta meta.',box,'ptoi-note');
  const linked=records.filter(r=>c.meta_id&&r.conteudo?.meta_id===c.meta_id&&(r.conteudo?.formato===irFormats.tracking||r.conteudo?.formato===irFormats.evolution)).slice().reverse();
  if(!linked.length)irElement('p','Sem acompanhamento ou evolução vinculada registrada.',box);
  for(const r of linked){const d=r.conteudo;irElement('strong',irDateBR(d.data||r.criado_em)+' · '+(r.conteudo.formato===irFormats.evolution?'Evolução':'Acompanhamento'),box);irLine(box,'Situação informada',d.estado);irLine(box,'Desempenho registrado',d.medida);irLine(box,'Atividades',d.atividades);irLine(box,'Resposta',d.resposta);irLine(box,'Observações',d.observacao);irLine(box,'Próximos passos',d.proximos);irEvolutionAudit(box,d)}
@@ -2086,7 +2116,7 @@ ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(
  if(!professionalData.name||!professionalData.crefito){ir('ir-status').textContent='Antes de imprimir, preencha seu nome e CREFITO em Meu Perfil.';return}
  const w=window.open('','_blank');if(!w){ir('ir-status').textContent='Permita janelas pop-up para imprimir.';return}
  const d=w.document;d.title='Relatório de evolução terapêutica — TO Kids PRO';
- const st=d.createElement('style');st.textContent=`@page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}.ir-assessment-audit{margin-top:14px;padding-top:10px;border-top:1px dashed #b7d5cc;font-size:11px}.ir-assessment-audit>strong{display:block;color:#176c60;margin:5px 0}.ir-audit-entry{padding:7px 0;border-top:1px solid #e2eeea;break-inside:avoid-page}.ir-audit-entry>strong{display:block}.ir-audit-note{font-size:10px;color:#61736f}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
+ const st=d.createElement('style');st.textContent=`.ir-report-review{padding:9px 12px;margin:8px 0;border-left:3px solid #72aa9c;background:#f4faf8;break-inside:avoid} @page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}.ir-assessment-audit{margin-top:14px;padding-top:10px;border-top:1px dashed #b7d5cc;font-size:11px}.ir-assessment-audit>strong{display:block;color:#176c60;margin:5px 0}.ir-audit-entry{padding:7px 0;border-top:1px solid #e2eeea;break-inside:avoid-page}.ir-audit-entry>strong{display:block}.ir-audit-note{font-size:10px;color:#61736f}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
  d.head.append(st);irBuild(d.body,irPatientRecords(),p,ir('ir-notes').value);d.close();w.focus();w.print();ir('ir-status').textContent='Na janela de impressão, desmarque Cabeçalhos e rodapés em Mais configurações para ocultar about:blank, data e numeração automática.'
 };
 const irOriginalRefresh=refreshData;
