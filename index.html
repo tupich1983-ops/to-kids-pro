@@ -1960,7 +1960,68 @@ function results40Render(){
  }
  const small=document.createElement('p');small.className='ptoi-note';small.textContent='Cada barra representa a quantidade de metas nessa situação. A ausência de registros não indica ausência de atendimento ou progresso.';box.append(small);
 }
-function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render()}
+// Correção 41 — Fase 3: linha do tempo documental por período e meta.
+// Os gráficos contam registros; não atribuem eficácia, progresso ou escore clínico.
+const timeline41=document.createElement('section');timeline41.id='timeline41';
+timeline41.style.cssText='border:1px solid #b7d9d0;border-radius:12px;padding:14px;margin:12px 0;background:#fff';
+results40.after(timeline41);
+const timeline41Filters=document.createElement('div');timeline41Filters.style.cssText='display:flex;flex-wrap:wrap;gap:10px;align-items:end';
+function timeline41Input(id,label,type){const wrap=document.createElement('label');wrap.style.cssText='flex:1 1 150px;font-size:13px';wrap.textContent=label;const input=document.createElement(type==='select'?'select':'input');input.id=id;if(type!=='select')input.type=type;input.style.width='100%';wrap.append(input);timeline41Filters.append(wrap);return input}
+const timeline41From=timeline41Input('timeline41-from','De','date');
+const timeline41To=timeline41Input('timeline41-to','Até','date');
+const timeline41Goal=timeline41Input('timeline41-goal','Meta terapêutica','select');
+const timeline41Clear=document.createElement('button');timeline41Clear.type='button';timeline41Clear.className='secondary';timeline41Clear.textContent='Limpar filtros';timeline41Clear.style.margin='0';timeline41Filters.append(timeline41Clear);
+const timeline41Body=document.createElement('div');
+function timeline41Date(r){const raw=String(r.conteudo?.data||r.criado_em||'');const match=/^(\d{4}-\d{2}-\d{2})/.exec(raw);return match?match[1]:''}
+function timeline41Render(){
+ timeline41.replaceChildren();irElement('h4','Evolução terapêutica ao longo do tempo — Correção 41',timeline41);
+ irElement('p','Distribuição documental de atendimentos, evoluções e revisões. Os registros não são pontuações de melhora ou piora clínica.',timeline41,'ptoi-note');
+ timeline41.append(timeline41Filters,timeline41Body);timeline41Body.replaceChildren();
+ const pid=ir('ir-patient').value;if(!pid||!patientRows.some(p=>p.id===pid)){irElement('p','Selecione um paciente fictício.',timeline41Body);return}
+ const rs=allRecords.filter(r=>r.paciente_id===pid),goals=rs.filter(r=>r.conteudo?.formato==='tokids_ptoi_meta_v1');
+ const prior=timeline41Goal.value;timeline41Goal.replaceChildren();
+ const allOpt=document.createElement('option');allOpt.value='';allOpt.textContent='Todas as metas';timeline41Goal.append(allOpt);
+ for(const g of goals){const id=g.conteudo?.meta_id;if(!id)continue;const opt=document.createElement('option');opt.value=id;opt.textContent=String(g.conteudo?.meta||g.conteudo?.area||'Meta sem descrição').slice(0,115);timeline41Goal.append(opt)}
+ timeline41Goal.value=[...timeline41Goal.options].some(o=>o.value===prior)?prior:'';
+ const from=timeline41From.value,to=timeline41To.value,goal=timeline41Goal.value;
+ if(from&&to&&from>to){irElement('p','A data inicial não pode ser posterior à data final.',timeline41Body,'err');return}
+ const format=r=>r.conteudo?.formato;
+ const events=rs.filter(r=>['tokids_evolucao_ptoi_v1','tokids_ptoi_acompanhamento_v1','tokids_ptoi_revisao_v1'].includes(format(r)))
+  .filter(r=>!goal||r.conteudo?.meta_id===goal).map(r=>({r,date:timeline41Date(r)}))
+  .filter(x=>x.date&&(!from||x.date>=from)&&(!to||x.date<=to));
+ const evol=events.filter(x=>format(x.r)==='tokids_evolucao_ptoi_v1');
+ const track=events.filter(x=>format(x.r)==='tokids_ptoi_acompanhamento_v1');
+ const reviews=events.filter(x=>format(x.r)==='tokids_ptoi_revisao_v1');
+ irElement('p',`${evol.length} evolução(ões) vinculada(s) · ${track.length} acompanhamento(s) · ${reviews.length} revisão(ões) no período.`,timeline41Body,'ptoi-note');
+ const monthly=new Map();for(const x of evol){const month=x.date.slice(0,7);monthly.set(month,(monthly.get(month)||0)+1)}
+ irElement('h5','Evoluções registradas por mês',timeline41Body);
+ if(!monthly.size)irElement('p','Nenhuma evolução vinculada encontrada para os filtros selecionados.',timeline41Body,'ptoi-note');
+ const max=Math.max(1,...monthly.values());
+ for(const [month,count] of [...monthly.entries()].sort((a,b)=>a[0].localeCompare(b[0]))){
+  const line=irElement('div',null,timeline41Body);line.style.cssText='margin:9px 0';
+  irElement('div',month.slice(5,7)+'/'+month.slice(0,4)+' · '+count+' evolução(ões)',line,'ptoi-note');
+  const bar=irElement('div',null,line);bar.style.cssText='height:14px;background:#e1eeea;border-radius:7px;overflow:hidden';
+  const fill=irElement('div',null,bar);fill.style.cssText='height:100%;background:#147d71;width:'+((count/max)*100)+'%';
+ }
+ irElement('h5','Histórico cronológico por meta',timeline41Body);
+ if(!events.length){irElement('p','Nenhum registro encontrado no intervalo selecionado.',timeline41Body);return}
+ const goalNames=new Map(goals.map(g=>[g.conteudo?.meta_id,String(g.conteudo?.meta||g.conteudo?.area||'Meta sem descrição')]));
+ const groups=new Map();for(const x of events){const id=x.r.conteudo?.meta_id||'';if(!groups.has(id))groups.set(id,[]);groups.get(id).push(x)}
+ for(const [id,items] of groups){const details=irElement('details',null,timeline41Body,'history');
+  const summary=irElement('summary',null,details);summary.textContent=(goalNames.get(id)||'Meta não localizada no PTOI')+' · '+items.length+' registro(s)';
+  for(const x of items.sort((a,b)=>a.date.localeCompare(b.date)||(Date.parse(a.r.criado_em||'')||0)-(Date.parse(b.r.criado_em||'')||0))){
+   const c=x.r.conteudo||{},kind=format(x.r),label=kind==='tokids_evolucao_ptoi_v1'?'Evolução clínica':kind==='tokids_ptoi_revisao_v1'?'Revisão terapêutica':'Acompanhamento';
+   const row=irElement('p',null,details);row.style.cssText='border-left:3px solid #b7d9d0;padding:5px 0 5px 10px;overflow-wrap:anywhere';
+   irElement('strong',irDateBR(x.date)+' · '+label+' — ',row);
+   row.append(document.createTextNode(String(kind==='tokids_ptoi_revisao_v1'?(c.decisao||'Decisão não informada'):kind==='tokids_ptoi_acompanhamento_v1'?(c.estado||'Estado não informado'):(c.estado||c.resposta||'Evolução registrada'))));
+  }
+ }
+ irElement('p','A contagem mensal considera somente evoluções vinculadas ao PTOI. Registros sem data válida não entram nos gráficos. A interpretação dos resultados é responsabilidade do terapeuta.',timeline41Body,'ptoi-note');
+}
+for(const el of [timeline41From,timeline41To,timeline41Goal])el.addEventListener('change',timeline41Render);
+timeline41Clear.addEventListener('click',()=>{timeline41From.value='';timeline41To.value='';timeline41Goal.value='';timeline41Render()});
+
+function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render()}
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
 ir('ir-patient').onchange=irRender;
 ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
