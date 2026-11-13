@@ -948,16 +948,17 @@ function evoEditor(r,article,pid){
  }
  const note=document.createElement('p');note.className='note';note.textContent='O paciente, o vínculo com a meta e a data original de criação do registro não serão alterados. Cada salvamento preserva a versão anterior.';details.append(note);
  const save=document.createElement('button');save.type='button';save.textContent='Salvar alterações desta evolução';const status=document.createElement('p');status.setAttribute('role','status');details.append(save,status);
- save.onclick=async()=>{if(!client){status.textContent='Entre na sua conta para editar.';return}const current=allRecords.find(x=>x.id===r.id&&x.paciente_id===pid&&x.conteudo?.formato==='tokids_evolucao_ptoi_v1');if(!current){status.textContent='Registro não encontrado. Atualize a página.';return}
+ save.onclick=async()=>{if(save.disabled)return;if(!client){status.textContent='Entre na sua conta para editar.';return}const current=allRecords.find(x=>x.id===r.id&&x.paciente_id===pid&&x.conteudo?.formato==='tokids_evolucao_ptoi_v1');if(!current){status.textContent='Registro não encontrado. Atualize a página.';return}
  const values=Object.fromEntries(evoEditFields.map(([k])=>[k,fields[k].value.trim()]));if(!values.data||!values.medida){status.textContent='Informe data e desempenho mensurável.';return}
  const before=current.conteudo,changed=evoEditFields.map(([k])=>k).filter(k=>String(before[k]||'')!==values[k]);if(!changed.length){status.textContent='Nenhuma alteração identificada.';return}
- save.disabled=true;try{const {data:authData,error:authError}=await client.auth.getUser();if(authError||!authData?.user)throw Error('Sessão não confirmada. Entre novamente.');
+ save.disabled=true;const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;try{const {data:authData,error:authError}=await client.auth.getUser();if(authError||!authData?.user||authData.user.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('Sessão alterada. Entre novamente.');
  const editor={usuario_id:authData.user.id,email:authData.user.email||'',nome:professionalData.name||'',crefito:professionalData.crefito||''};const editTime=new Date().toISOString();const history=Array.isArray(before.historico_edicoes)?before.historico_edicoes.slice():[];
  history.push({alterado_em:editTime,versao_anterior:Number(before.versao)||1,editor,campos_alterados:changed,anterior:Object.fromEntries(evoEditFields.map(([k])=>[k,before[k]||'']))});
  const conteudo={...before,...values,versao:(Number(before.versao)||1)+1,atualizado_em:editTime,editor_ultima_alteracao:editor,historico_edicoes:history};
  const {data,error}=await client.from('registros_clinicos').update({conteudo}).eq('id',r.id).eq('paciente_id',pid).eq('tipo','evolucao').select('id');if(error)throw error;if(!data?.length)throw Error('O banco não confirmou a atualização. Verifique as permissões RLS.');
- await refreshData();evo$('evo-message').textContent='Evolução atualizada e versão anterior preservada no Supabase.';
- }catch(e){status.textContent='Falha ao editar evolução: '+e.message}finally{save.disabled=false}};
+ const savedMessage='Evolução atualizada e versão anterior preservada no Supabase.';status.textContent=savedMessage;
+ try{await refreshData();if(clinicalSessionMatches(owner,epoch))evo$('evo-message').textContent=savedMessage;}catch(refreshError){console.warn('Evolução editada; atualização visual indisponível:',refreshError);status.textContent=savedMessage+' A lista não atualizou; NÃO salve novamente.';}
+ }catch(e){status.textContent='Não foi possível confirmar a edição: '+e.message+' Confira o histórico antes de repetir.'}finally{save.disabled=false}};
  article.append(details);
  const history=Array.isArray(c.historico_edicoes)?c.historico_edicoes:[];
  if(history.length){const audit=document.createElement('details');audit.className='history';const sum=document.createElement('summary');sum.textContent='📋 Histórico de alterações ('+history.length+')';audit.append(sum);
@@ -972,19 +973,25 @@ function evoHistory(){
  for(const [label,val] of [['Atividades',c.atividades],['Desempenho',c.medida],['Resposta',c.resposta],['Situação',c.estado],['Próximos passos',c.proximos]]){const line=document.createElement('p'),b=document.createElement('strong');b.textContent=label+': ';line.append(b,document.createTextNode(String(val||'Não informado')));article.append(line)}const ver=document.createElement('p');ver.textContent=evoAuditText(c);article.append(ver);evoEditor(r,article,pid);box.append(article)}
 }
 evo$('evo-patient').onchange=evoGoals;
+// Correção 21: confirma o vínculo e a gravação sem confundir falha de atualização visual.
 evo$('evo-save').onclick=async()=>{
+ if(evo$('evo-save').disabled)return;
  const pid=evo$('evo-patient').value,metaId=evo$('evo-goal').value,measure=evo$('evo-performance').value.trim();
  const message=evo$('evo-message');if(!client||!pid||!metaId){message.textContent='Selecione paciente fictício e uma meta cadastrada.';return}
  if(!evo$('evo-date').value||!measure){message.textContent='Informe data e desempenho mensurável.';return}
  const goal=allRecords.find(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1'&&r.conteudo.meta_id===metaId);
  if(!goal){message.textContent='Meta não encontrada. Atualize os dados e tente novamente.';return}
- const btn=evo$('evo-save');btn.disabled=true;
+ const btn=evo$('evo-save');btn.disabled=true;const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
  try{
+  const {data:authData,error:authError}=await client.auth.getUser();
+  if(authError||!authData?.user||authData.user.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('Sessão alterada. Entre novamente.');
+  if(!patientRows.some(p=>p.id===pid)||!allRecords.some(r=>r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1'&&r.conteudo.meta_id===metaId))throw Error('Paciente ou meta não está disponível nesta sessão.');
   const conteudo={formato:'tokids_evolucao_ptoi_v1',versao:1,meta_id:metaId,data:evo$('evo-date').value,atividades:evo$('evo-activities').value.trim(),medida:measure,resposta:evo$('evo-response').value.trim(),estado:evo$('evo-status').value,proximos:evo$('evo-next').value.trim()};
   const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Evolução vinculada ao PTOI',conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');if(error)throw error;
   for(const id of ['evo-activities','evo-performance','evo-response','evo-next'])evo$(id).value='';
-  await refreshData();message.textContent='Evolução vinculada salva no Supabase.';
- }catch(e){message.textContent='Falha ao salvar evolução: '+e.message}finally{btn.disabled=false}
+  const savedMessage='Evolução vinculada salva no Supabase.';message.textContent=savedMessage;
+  try{await refreshData();if(clinicalSessionMatches(owner,epoch))message.textContent=savedMessage;}catch(refreshError){console.warn('Evolução salva; atualização visual indisponível:',refreshError);message.textContent=savedMessage+' A lista não atualizou; NÃO salve novamente.';}
+ }catch(e){message.textContent='Não foi possível confirmar a evolução: '+e.message+' Confira o histórico antes de repetir.'}finally{btn.disabled=false}
 };
 // Atualiza as opções após carregar dados e quando o paciente ativo mudar.
 const evoPreviousRefresh=refreshData;
