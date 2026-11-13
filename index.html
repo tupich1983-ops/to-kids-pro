@@ -833,20 +833,32 @@ function ptoiRender(){
   const editCancel=ptoiElement('button','Cancelar edição','secondary');editCancel.type='button';
   editCancel.onclick=()=>{for(const [key] of editFields)editInputs[key].value=ptoiSafe(d[key]);periodEdit.value=d.prazo||'curto';areaEdit.value=ptoiSafe(d.area);editor.open=false};
   editSave.onclick=async()=>{
+   if(editSave.disabled)return;
    if(!client||!g.id)return ptoiStatus('Não foi possível identificar o registro da meta. Atualize a página.',true);
+   const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
+   if(!owner)return ptoiStatus('Entre novamente para editar esta meta.',true);
+   const current=allRecords.find(r=>r.id===g.id&&r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1');
+   if(!current||current.conteudo.meta_id!==d.meta_id)return ptoiStatus('Meta alterada ou indisponível. Atualize a lista antes de editar.',true);
    if(ptoi$('ptoi-patient').value!==pid)return ptoiStatus('O paciente ativo mudou. Reabra a meta.',true);
    const values=Object.fromEntries(editFields.map(([key])=>[key,editInputs[key].value.trim()]));
    if(!values.meta||!values.linha_base||!values.criterio)return ptoiStatus('Meta, linha de base e critério são obrigatórios.',true);
    if(!areaEdit.value.trim())return ptoiStatus('Informe a área ocupacional.',true);
    editSave.disabled=true;
    try{
-    const conteudo={...d,...values,prazo:periodEdit.value,area:areaEdit.value.trim()};
+    const {data:auth,error:authError}=await client.auth.getUser();
+    if(authError||auth?.user?.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('A sessão mudou. Entre novamente antes de editar.');
+    const editedAt=new Date().toISOString();
+    const history=Array.isArray(current.conteudo.historico_edicoes)?current.conteudo.historico_edicoes.slice():[];
+    history.push({alterado_em:editedAt,versao_anterior:Number(current.conteudo.versao)||1,conteudo_anterior:{...current.conteudo,historico_edicoes:undefined},usuario_id:owner});
+    const conteudo={...current.conteudo,...values,prazo:periodEdit.value,area:areaEdit.value.trim(),meta_id:d.meta_id,versao:(Number(current.conteudo.versao)||1)+1,atualizado_em:editedAt,historico_edicoes:history};
     const titulo='PTOI — '+conteudo.prazo+' — '+conteudo.area;
     const {data,error}=await client.from('registros_clinicos').update({titulo,conteudo}).eq('id',g.id).eq('paciente_id',pid).select('id');
     if(error)throw error;
-    if(!data?.length)throw new Error('Nenhuma meta foi atualizada. Verifique as permissões de edição no Supabase.');
-    await refreshData();ptoiStatus('Meta atualizada. O histórico e as evoluções vinculadas foram preservados.');
-   }catch(e){ptoiStatus('Falha ao atualizar meta: '+e.message,true)}finally{editSave.disabled=false}
+    if(!data?.some(row=>row.id===g.id))throw new Error('Nenhuma meta foi atualizada. Verifique as permissões de edição no Supabase.');
+    const confirmation='Meta atualizada no Supabase. Versão anterior preservada e vínculos com evoluções mantidos.';
+    ptoiStatus(confirmation);
+    try{await refreshData();ptoiStatus(confirmation)}catch(refreshError){console.warn('Meta salva; falha ao atualizar a lista:',refreshError);ptoiStatus(confirmation+' Atualize a lista depois; não salve novamente.')}
+   }catch(e){ptoiStatus('Não foi possível confirmar a edição: '+e.message+' Confira a meta antes de repetir.',true)}finally{editSave.disabled=false}
   };
   const actions=ptoiElement('div',undefined,'ptoi-actions');actions.append(editSave,editCancel);editGrid.append(actions);editor.append(editGrid);card.append(editor);
   const progress=records.filter(r=>r.conteudo.formato==='tokids_ptoi_acompanhamento_v1'&&r.conteudo.meta_id===d.meta_id).slice().reverse();
@@ -862,12 +874,20 @@ function ptoiRender(){
   const lm=ptoiElement('label','Medida observável / nível de ajuda'),measure=ptoiElement('input');measure.placeholder='Ex.: 3/5 etapas com 2 pistas';card.append(lm,measure);
   const lo=ptoiElement('label','Resposta, barreiras e próxima decisão'),obs=ptoiElement('textarea');obs.rows=2;obs.placeholder='Ex.: respondeu melhor a pista visual; manter treino na rotina';card.append(lo,obs);
   const save=ptoiElement('button','Registrar acompanhamento');save.type='button';save.onclick=async()=>{
+   if(save.disabled)return;
+   if(!client||!clinicalSessionOwner)return ptoiStatus('Entre novamente antes de registrar acompanhamento.',true);
+   if(ptoi$('ptoi-patient').value!==pid||!allRecords.some(r=>r.id===g.id&&r.paciente_id===pid&&r.conteudo?.meta_id===d.meta_id))return ptoiStatus('O paciente ou a meta mudou. Atualize antes de salvar.',true);
    if(!measure.value.trim()&&!obs.value.trim())return ptoiStatus('Descreva uma medida ou observação para registrar.',true);
+   const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
    save.disabled=true;try{
+    const {data:auth,error:authError}=await client.auth.getUser();
+    if(authError||auth?.user?.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('A sessão mudou. Entre novamente.');
     const conteudo={formato:'tokids_ptoi_acompanhamento_v1',versao:1,meta_id:d.meta_id,data:date.value,estado:state.value,medida:measure.value.trim(),observacao:obs.value.trim()};
     const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — acompanhamento de meta',conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
-    if(error)throw error;await refreshData();ptoiStatus('Acompanhamento salvo no Supabase.')
-   }catch(e){ptoiStatus('Falha ao salvar acompanhamento: '+e.message,true)}finally{save.disabled=false}
+    if(error)throw error;
+    const confirmation='Acompanhamento salvo no Supabase.';ptoiStatus(confirmation);
+    try{await refreshData();ptoiStatus(confirmation)}catch(refreshError){console.warn('Acompanhamento salvo; falha ao atualizar a lista:',refreshError);ptoiStatus(confirmation+' Atualize a lista depois; não salve novamente.')}
+   }catch(e){ptoiStatus('Não foi possível confirmar o acompanhamento: '+e.message+' Confira o histórico antes de repetir.',true)}finally{save.disabled=false}
   };card.append(save);list.append(card)
  }
 }
@@ -877,15 +897,21 @@ ptoi$('ptoi-save').onclick=async()=>{
  const pid=ptoi$('ptoi-patient').value,meta=ptoi$('ptoi-goal').value.trim(),baseline=ptoi$('ptoi-baseline').value.trim(),criterion=ptoi$('ptoi-criterion').value.trim();
  if(!client||!pid)return ptoiStatus('Selecione um paciente fictício.',true);
  if(!meta||!baseline||!criterion)return ptoiStatus('Preencha meta, linha de base e critério de alcance.',true);
- const button=ptoi$('ptoi-save');button.disabled=true;
+ const button=ptoi$('ptoi-save');if(button.disabled)return;
+ const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
+ if(!owner)return ptoiStatus('Entre novamente antes de salvar a meta.',true);
+ button.disabled=true;
  try{
+  const {data:auth,error:authError}=await client.auth.getUser();
+  if(authError||auth?.user?.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('A sessão mudou. Entre novamente.');
   const metaId=crypto.randomUUID();
   const conteudo={formato:'tokids_ptoi_meta_v1',versao:1,meta_id:metaId,prazo:ptoi$('ptoi-period').value,area:ptoi$('ptoi-domain').value,revisao:ptoi$('ptoi-targetdate').value,meta,linha_base:baseline,criterio:criterion,estrategias:ptoi$('ptoi-strategy').value.trim()};
   const {data:saveConfirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — '+conteudo.prazo+' — '+conteudo.area,conteudo}).select('id').single();if(!error&&!saveConfirmation?.id)throw Error('O Supabase não confirmou a gravação.');
   if(error)throw error;
   for(const id of ['ptoi-goal','ptoi-baseline','ptoi-criterion','ptoi-strategy','ptoi-targetdate'])ptoi$(id).value='';
-  await refreshData();ptoiStatus('Meta salva no Supabase. Você já pode registrar o acompanhamento.')
- }catch(e){ptoiStatus('Falha ao salvar meta: '+e.message,true)}finally{button.disabled=false}
+  const confirmation='Meta salva no Supabase. Você já pode registrar o acompanhamento.';ptoiStatus(confirmation);
+  try{await refreshData();ptoiStatus(confirmation)}catch(refreshError){console.warn('Meta salva; falha ao atualizar a lista:',refreshError);ptoiStatus(confirmation+' Atualize a lista depois; não salve novamente.')}
+ }catch(e){ptoiStatus('Não foi possível confirmar o salvamento da meta: '+e.message+' Confira as metas antes de repetir.',true)}finally{button.disabled=false}
 };
 // Envolve as funcoes existentes sem alterar o fluxo de autenticacao ou escrita.
 const ptoiRefreshOriginal=refreshData;
