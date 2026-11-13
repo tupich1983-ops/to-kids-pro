@@ -1222,6 +1222,60 @@ function ptoiRender(){
    timeline.append(item);
   }
   card.append(timeline);
+  // Correção 37: revisões clínicas independentes, preservando a meta e o histórico.
+  const reviews=allRecords.filter(r=>r.paciente_id===pid && r.conteudo?.formato==='tokids_ptoi_revisao_v1' && r.conteudo.meta_id===d.meta_id)
+   .slice().sort((a,b)=>String(b.conteudo?.data||'').localeCompare(String(a.conteudo?.data||''))||(Date.parse(b.criado_em||'')||0)-(Date.parse(a.criado_em||'')||0));
+  const reviewBox=ptoiElement('section');reviewBox.className='history ptoi-review';
+  reviewBox.style.cssText='background:#f8fcfa;border:1px solid #b7d9d0;padding:12px;margin:12px 0;border-radius:10px';
+  reviewBox.append(ptoiElement('h4','Revisão terapêutica da meta'));
+  reviewBox.append(ptoiElement('p','Decisão registrada pelo terapeuta. A revisão não modifica a meta original nem os acompanhamentos anteriores.','ptoi-note'));
+  if(reviews.length){
+   const history=ptoiElement('details');history.append(ptoiElement('summary','Histórico de revisões ('+reviews.length+')'));
+   for(const r of reviews){
+    const x=r.conteudo,entry=ptoiElement('article');entry.className='history';
+    entry.append(ptoiElement('strong',ptoiDate(x.data)+' · '+ptoiSafe(x.decisao)));
+    const justification=ptoiElement('p');justification.style.whiteSpace='pre-wrap';justification.append(ptoiElement('strong','Justificativa: '),document.createTextNode(ptoiSafe(x.justificativa)));entry.append(justification);
+    if(ptoiSafe(x.conduta)){const plan=ptoiElement('p');plan.style.whiteSpace='pre-wrap';plan.append(ptoiElement('strong','Conduta: '),document.createTextNode(ptoiSafe(x.conduta)));entry.append(plan)}
+    history.append(entry);
+   }
+   reviewBox.append(history);
+   reviewBox.append(ptoiElement('p','Última decisão registrada: '+ptoiSafe(reviews[0].conteudo.decisao)+' ('+ptoiDate(reviews[0].conteudo.data)+').','ptoi-note'));
+  }else reviewBox.append(ptoiElement('p','Nenhuma revisão clínica registrada para esta meta.','ptoi-note'));
+  const reviewForm=ptoiElement('details');reviewForm.className='ptoi-editor';
+  reviewForm.append(ptoiElement('summary','Registrar nova revisão clínica'));
+  const reviewDateLabel=ptoiElement('label','Data da revisão'),reviewDate=ptoiElement('input');reviewDate.type='date';reviewDate.value=new Date().toLocaleDateString('en-CA');
+  const decisionLabel=ptoiElement('label','Decisão profissional'),decision=ptoiElement('select');
+  for(const name of ['Manter meta','Ajustar meta','Concluir meta']){const option=ptoiElement('option',name);option.value=name;decision.append(option)}
+  const reasonLabel=ptoiElement('label','Justificativa clínica (obrigatória)'),reason=ptoiElement('textarea');reason.rows=3;reason.placeholder='Descreva os achados e o raciocínio clínico que fundamentam a decisão.';
+  const conductLabel=ptoiElement('label','Conduta proposta / ajustes a realizar'),conduct=ptoiElement('textarea');conduct.rows=2;conduct.placeholder='Registre orientações, reavaliação ou mudanças planejadas.';
+  const reviewSave=ptoiElement('button','Confirmar e salvar revisão');reviewSave.type='button';
+  const reviewMessage=ptoiElement('p');reviewMessage.setAttribute('role','status');reviewMessage.className='ptoi-note';
+  reviewSave.onclick=async()=>{
+   if(reviewSave.disabled)return;
+   const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;
+   if(!client||!owner)return ptoiStatus('Entre novamente antes de registrar uma revisão.',true);
+   if(ptoi$('ptoi-patient').value!==pid||!patientRows.some(p=>p.id===pid)||!allRecords.some(r=>r.id===g.id&&r.paciente_id===pid&&r.conteudo?.formato==='tokids_ptoi_meta_v1'&&r.conteudo.meta_id===d.meta_id))return ptoiStatus('Paciente ou meta alterados. Atualize antes de salvar.',true);
+   if(!reviewDate.value||!reason.value.trim())return ptoiStatus('Informe a data e a justificativa clínica da revisão.',true);
+   if(!confirm('Confirmar o registro desta revisão terapêutica? A decisão será salva como novo registro, sem alterar a meta.'))return;
+   reviewSave.disabled=true;
+   try{
+    const {data:auth,error:authError}=await client.auth.getUser();
+    if(authError||auth?.user?.id!==owner||!clinicalSessionMatches(owner,epoch))throw Error('A sessão mudou. Entre novamente.');
+    if(ptoi$('ptoi-patient').value!==pid)throw Error('O paciente selecionado mudou.');
+    const conteudo={formato:'tokids_ptoi_revisao_v1',versao:1,meta_id:d.meta_id,data:reviewDate.value,decisao:decision.value,justificativa:reason.value.trim(),conduta:conduct.value.trim()};
+    const {data:confirmation,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'plano_terapeutico',titulo:'PTOI — revisão terapêutica da meta',conteudo}).select('id').single();
+    if(error)throw error;
+    if(!confirmation?.id)throw Error('O Supabase não confirmou a gravação.');
+    const saved='Revisão clínica salva no Supabase. A meta original foi preservada.';
+    ptoiStatus(saved);reviewMessage.textContent=saved;
+    const refreshed=await refreshData();
+    if(refreshed)ptoiStatus(saved);
+    else ptoiStatus(saved+' A lista não foi atualizada; não salve novamente.');
+   }catch(error){ptoiStatus('Não foi possível confirmar a revisão: '+error.message+' Confira o histórico antes de tentar novamente.',true);reviewMessage.textContent='Confira o histórico antes de repetir.'}
+   finally{reviewSave.disabled=false}
+  };
+  reviewForm.append(reviewDateLabel,reviewDate,decisionLabel,decision,reasonLabel,reason,conductLabel,conduct,reviewSave,reviewMessage);
+  reviewBox.append(reviewForm);card.append(reviewBox);
   const wrap=ptoiElement('div',undefined,'ptoi-grid');
   const a=ptoiElement('div'),b=ptoiElement('div');
   const la=ptoiElement('label','Estado da meta'),state=ptoiElement('select');
