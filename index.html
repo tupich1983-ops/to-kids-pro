@@ -2021,7 +2021,61 @@ function timeline41Render(){
 for(const el of [timeline41From,timeline41To,timeline41Goal])el.addEventListener('change',timeline41Render);
 timeline41Clear.addEventListener('click',()=>{timeline41From.value='';timeline41To.value='';timeline41Goal.value='';timeline41Render()});
 
-function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render()}
+// Correção 42 — comparação documental de períodos e áreas, sem escores inferidos.
+const comparison42=document.createElement('section');comparison42.id='comparison42';
+comparison42.style.cssText='border:1px solid #b7d9d0;border-radius:12px;padding:14px;margin:12px 0;background:#f8fcfa';
+timeline41.after(comparison42);
+const comparison42Controls=document.createElement('div');comparison42Controls.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px';
+function comparison42Control(label,type){const wrap=document.createElement('label');wrap.textContent=label;wrap.style.cssText='font-size:13px';const input=document.createElement(type==='select'?'select':'input');if(type!=='select')input.type=type;input.style.width='100%';wrap.append(input);comparison42Controls.append(wrap);return input}
+const comparison42AFrom=comparison42Control('Período A — início','date'),comparison42ATo=comparison42Control('Período A — fim','date');
+const comparison42BFrom=comparison42Control('Período B — início','date'),comparison42BTo=comparison42Control('Período B — fim','date');
+const comparison42Area=comparison42Control('Área terapêutica','select');
+const comparison42Clear=document.createElement('button');comparison42Clear.type='button';comparison42Clear.className='secondary';comparison42Clear.textContent='Limpar comparação';
+const comparison42Body=document.createElement('div');
+function comparison42Render(){
+ comparison42.replaceChildren();irElement('h4','Comparativo documental por períodos — Correção 42',comparison42);
+ irElement('p','Compare registros e decisões documentadas por área. Quantidade de atendimentos ou mudança de situação não representa, por si só, melhora clínica.',comparison42,'ptoi-note');
+ comparison42.append(comparison42Controls,comparison42Clear,comparison42Body);comparison42Body.replaceChildren();
+ const pid=ir('ir-patient').value;if(!pid||!patientRows.some(p=>p.id===pid)){irElement('p','Selecione um paciente fictício.',comparison42Body);return}
+ const rs=allRecords.filter(r=>r.paciente_id===pid),goals=rs.filter(r=>r.conteudo?.formato==='tokids_ptoi_meta_v1');
+ const previous=comparison42Area.value,areas=[...new Set(goals.map(g=>String(g.conteudo?.area||'Não informada').trim()||'Não informada'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+ comparison42Area.replaceChildren();const optAll=document.createElement('option');optAll.value='';optAll.textContent='Todas as áreas';comparison42Area.append(optAll);
+ for(const area of areas){const o=document.createElement('option');o.value=area;o.textContent=area;comparison42Area.append(o)}comparison42Area.value=areas.includes(previous)?previous:'';
+ const aFrom=comparison42AFrom.value,aTo=comparison42ATo.value,bFrom=comparison42BFrom.value,bTo=comparison42BTo.value;
+ if((aFrom&&aTo&&aFrom>aTo)||(bFrom&&bTo&&bFrom>bTo)){irElement('p','A data inicial não pode ser posterior à data final.',comparison42Body,'err');return}
+ if(!aFrom||!aTo||!bFrom||!bTo){irElement('p','Preencha as quatro datas para comparar dois períodos completos.',comparison42Body,'ptoi-note');return}
+ const selected=goals.filter(g=>!comparison42Area.value||(String(g.conteudo?.area||'Não informada').trim()||'Não informada')===comparison42Area.value);
+ const ids=new Set(selected.map(g=>g.conteudo?.meta_id).filter(Boolean));
+ const formats=['tokids_evolucao_ptoi_v1','tokids_ptoi_acompanhamento_v1','tokids_ptoi_revisao_v1'];
+ const events=rs.filter(r=>formats.includes(r.conteudo?.formato)&&ids.has(r.conteudo?.meta_id)).map(r=>({r,date:timeline41Date(r)})).filter(x=>x.date);
+ function summarize(from,to){const subset=events.filter(x=>x.date>=from&&x.date<=to),counts={evol:0,track:0,reviews:0};const latest=new Map();
+  for(const x of subset){const f=x.r.conteudo?.formato;if(f===formats[0])counts.evol++;if(f===formats[1])counts.track++;if(f===formats[2]){counts.reviews++;const id=x.r.conteudo?.meta_id,old=latest.get(id);if(!old||x.date>old.date||(x.date===old.date&&(Date.parse(x.r.criado_em||'')||0)>(Date.parse(old.r.criado_em||'')||0)))latest.set(id,x)}}
+  const decisions={'Manter meta':0,'Ajustar meta':0,'Concluir meta':0};for(const x of latest.values())if(Object.hasOwn(decisions,x.r.conteudo?.decisao))decisions[x.r.conteudo.decisao]++;
+  return {subset,counts,decisions,latest};}
+ const a=summarize(aFrom,aTo),b=summarize(bFrom,bTo);
+ const table=irElement('table',null,comparison42Body);table.style.cssText='width:100%;border-collapse:collapse;margin:12px 0;font-size:14px';
+ function tr42(label,va,vb,head=false){const tr=document.createElement('tr');for(const value of [label,va,vb]){const cell=document.createElement(head?'th':'td');cell.textContent=String(value);cell.style.cssText='padding:9px 6px;border-bottom:1px solid #d4e5de;text-align:left;vertical-align:top';tr.append(cell)}table.append(tr)}
+ tr42('Indicador','Período A','Período B',true);tr42('Metas selecionadas',selected.length,selected.length);
+ tr42('Evoluções vinculadas',a.counts.evol,b.counts.evol);tr42('Acompanhamentos',a.counts.track,b.counts.track);tr42('Revisões registradas',a.counts.reviews,b.counts.reviews);
+ for(const [key,label] of [['Manter meta','Últimas revisões no período: manter'],['Ajustar meta','Últimas revisões no período: ajustar'],['Concluir meta','Últimas revisões no período: concluir']])tr42(label,a.decisions[key],b.decisions[key]);
+ irElement('p','As decisões são contabilizadas pela última revisão de cada meta DENTRO de cada período. Uma meta sem revisão naquele intervalo não recebe situação presumida.',comparison42Body,'ptoi-note');
+ irElement('h5','Síntese descritiva por meta',comparison42Body);
+ if(!selected.length){irElement('p','Nenhuma meta cadastrada para a área selecionada.',comparison42Body);return}
+ for(const g of selected){const id=g.conteudo?.meta_id;if(!id)continue;const box=irElement('details',null,comparison42Body,'history');const title=irElement('summary',String(g.conteudo?.meta||'Meta sem descrição').slice(0,180),box);
+  irElement('p','Área: '+(g.conteudo?.area||'Não informada')+' · Prazo: '+(g.conteudo?.prazo||'Não informado'),box,'ptoi-note');
+  for(const [label,part] of [['Período A',a],['Período B',b]]){const ev=part.subset.filter(x=>x.r.conteudo?.meta_id===id);const review=part.latest.get(id)?.r.conteudo;
+   irElement('strong',label+' — '+ev.filter(x=>x.r.conteudo?.formato===formats[0]).length+' evolução(ões), '+ev.filter(x=>x.r.conteudo?.formato===formats[1]).length+' acompanhamento(s), '+ev.filter(x=>x.r.conteudo?.formato===formats[2]).length+' revisão(ões).',box);
+   irElement('p','Última decisão neste período: '+(review?.decisao||'Sem revisão registrada')+(review?.data?' ('+irDateBR(review.data)+')':''),box,'ptoi-note');
+   const latestEvo=ev.filter(x=>x.r.conteudo?.formato===formats[0]).sort((x,y)=>y.date.localeCompare(x.date)||(Date.parse(y.r.criado_em||'')||0)-(Date.parse(x.r.criado_em||'')||0))[0];
+   if(latestEvo){const c=latestEvo.r.conteudo||{};irElement('p','Última evolução registrada: '+irDateBR(latestEvo.date)+' · '+String(c.medida||c.resposta||c.estado||'Sem descrição de desempenho').slice(0,450),box)}
+  }
+ }
+ irElement('p','Síntese apenas documental. Registros sem data válida não entram no comparativo. As metas são as atualmente cadastradas, e não uma reconstrução histórica da composição do PTOI.',comparison42Body,'ptoi-note');
+}
+for(const input of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])input.addEventListener('change',comparison42Render);
+comparison42Clear.onclick=()=>{for(const el of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])el.value='';comparison42Render()};
+
+function irRender(){const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid),records=irPatientRecords();const notes=p?irLatestNotes(records):'';ir('ir-notes').value=notes;irBuild(ir('ir-preview'),records,p,notes);results40Render();timeline41Render();comparison42Render()}
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
 ir('ir-patient').onchange=irRender;
 ir('ir-notes').addEventListener('input',()=>{irBuild(ir('ir-preview'),irPatientRecords(),patientRows.find(p=>p.id===ir('ir-patient').value),ir('ir-notes').value)});
