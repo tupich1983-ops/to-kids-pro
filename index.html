@@ -70,6 +70,24 @@ import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
 const $=id=>document.getElementById(id);let client=null,patientRows=[],allRecords=[],selectedPatientId=null;
 // Correção 12: geração da sessão para impedir respostas antigas na interface.
 let clinicalSessionOwner=null, clinicalSessionEpoch=0, clinicalLoadSerial=0;
+// Correção 24: guardar apenas o identificador do paciente ativo por conta e aba.
+// Os dados clínicos continuam exclusivamente no Supabase; a seleção é validada
+// novamente contra a lista autorizada antes de ser restaurada.
+const activePatientStoragePrefix='tokids_active_patient_v24_';
+function readActivePatient(owner){
+ if(!owner)return null;
+ try{return sessionStorage.getItem(activePatientStoragePrefix+owner)||null}
+ catch(e){return null}
+}
+function saveActivePatient(owner,id){
+ if(!owner||!id)return;
+ try{sessionStorage.setItem(activePatientStoragePrefix+owner,id)}catch(e){}
+}
+function clearActivePatient(owner){
+ if(!owner)return;
+ try{sessionStorage.removeItem(activePatientStoragePrefix+owner)}catch(e){}
+}
+
 function clinicalClearView(){
  patientRows=[];allRecords=[];selectedPatientId=null;
  for(const id of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient','recordlist','evallist','modulehistory','wizardhistory']){
@@ -114,6 +132,7 @@ const recBands=[
 function setSelectedPatient(id,show=false){
  if(!patientRows.some(p=>p.id===id))return;
  selectedPatientId=id;
+  saveActivePatient(clinicalSessionOwner,id);
  updateActivePatientUI();
  for(const name of ['recordpatient','evalpatient','modulepatient','wizardpatient']){const el=$(name);if(el){el.value=id;el.dispatchEvent(new Event('change'))}}
  renderPatientProfile();
@@ -149,8 +168,14 @@ async function refreshData(){
  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return;
  if(re){msg('Erro ao carregar registros: '+re.message,true);return}
  allRecords=rs||[];
- if(!patientRows.some(p=>p.id===selectedPatientId))selectedPatientId=patientRows[0]?.id||null;
- if(selectedPatientId)setSelectedPatient(selectedPatientId);else updateActivePatientUI();
+  // Reutilizar a seleção atual; após recarregar a página, recuperar a seleção
+  // da mesma conta somente se o Supabase ainda autorizar esse paciente.
+ if(!patientRows.some(p=>p.id===selectedPatientId)){
+   const remembered=readActivePatient(owner);
+   selectedPatientId=patientRows.some(p=>p.id===remembered)?remembered:(patientRows[0]?.id||null);
+  }
+ if(selectedPatientId)setSelectedPatient(selectedPatientId);
+  else{clearActivePatient(owner);updateActivePatientUI();}
  renderModuleHistory();renderWizardHistory();$('recordlist').replaceChildren();
  for(const r of rs||[]){const row=document.createElement('p');row.textContent=(patientRows.find(p=>p.id===r.paciente_id)?.nome||'Paciente')+' · '+clean(r.tipo)+' · '+clean(r.titulo)+' · '+clean(r.conteudo?.observacao);$('recordlist').append(row)}
  $('evallist').replaceChildren();
@@ -540,7 +565,7 @@ $('save-new-password').onclick=async()=>{
  finally{$('save-new-password').disabled=false}
 };
 $('cancel-password-recovery').onclick=async()=>{if(client)await client.auth.signOut();leaveRecoveryMode();history.replaceState(null,'',location.pathname);msg('Volte ao login ou solicite outro link de recuperação.');};
-$('logout').onclick=async()=>{if(client)await client.auth.signOut();await display(null);msg('Sessão encerrada.');};
+$('logout').onclick=async()=>{const owner=clinicalSessionOwner;if(client)await client.auth.signOut();clearActivePatient(owner);await display(null);msg('Sessão encerrada.');};
 
 // Configuração pública do projeto. Nunca inclua chaves secretas ou senhas aqui.
 const PUBLIC_SUPABASE_URL='https://pmndyeccfbnjikivfapj.supabase.co';
@@ -551,7 +576,7 @@ const PUBLIC_SUPABASE_KEY='sb_publishable_48CcbW0k2JLgL8HnplJiaA_GW3Q43b-';
    client.auth.onAuthStateChange((event,session)=>{
      if(event==='PASSWORD_RECOVERY')enterRecoveryMode();
      // Não abrir o prontuário automaticamente durante a redefinição de senha.
-     if(event==='SIGNED_OUT'){void display(null);return;}
+     if(event==='SIGNED_OUT'){clearActivePatient(clinicalSessionOwner);void display(null);return;}
      if(event==='SIGNED_IN' && !recoveryMode && !recoveryFromUrl && session)void display(session);
    });
    const {data:{session},error}=await client.auth.getSession();
