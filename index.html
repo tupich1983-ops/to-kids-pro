@@ -176,6 +176,7 @@ $('updatepatient').onclick=async()=>{
 };
 $('patientactivities').onclick=()=>openPage('library');
 $('patientassessment').onclick=()=>openPage('evaluation');
+// Correção 19: confirmação de gravação independente da atualização visual.
 $('createrecord').onclick=async()=>{
  const button=$('createrecord');if(button.disabled)return;
  const paciente_id=$('recordpatient').value;
