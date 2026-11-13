@@ -1814,11 +1814,16 @@ function ir44Validate(){const s=ir44Settings(),feedback=document.getElementById(
 const ir=id=>document.getElementById(id);
 const ir46Warning=document.createElement('p');ir46Warning.id='ir46-warning';ir46Warning.className='ir-review-note';ir46Warning.setAttribute('role','status');
 integratedReport.insertBefore(ir46Warning,document.getElementById('ir-preview'));
+// Correção 47 — histórico de solicitações de impressão, sem armazenar o PDF.
+const ir47History=document.createElement('section');ir47History.id='ir47-history';
+ir47History.innerHTML='<h4>Histórico de relatórios preparados para impressão</h4><p style="font-size:13px">Cada entrada registra uma solicitação de impressão confirmada e encaminhada ao navegador. Não comprova que o PDF foi salvo ou impresso. O conteúdo do relatório não é armazenado aqui.</p><div id="ir47-entries" role="status"></div>';
+integratedReport.append(ir47History);
 
 const report43Style=document.createElement('style');
 report43Style.textContent='#ir-preview .ir-report-review{margin:8px 0;padding:9px 12px;border-left:3px solid #72aa9c;background:#f4faf8;border-radius:4px}#ir-preview .ir-report-review p{margin:4px 0}';
 report43Style.textContent+='#ir-preview .ir-document-head{border:1px solid #cbded8;border-radius:8px;padding:12px 14px;background:#f8fcfa;margin:12px 0}#ir-preview .ir-document-head>strong{display:block;color:#155c52;margin-bottom:7px}#ir-preview .ir-document-head p{margin:4px 0}';
 document.head.append(report43Style);
+const ir47Format='tokids_relatorio_emissao_v1';
 const irFormats={assessment:['tokids_avaliacao_completa_v1','avaliacao_estruturada_v1'],goal:'tokids_ptoi_meta_v1',tracking:'tokids_ptoi_acompanhamento_v1',evolution:'tokids_evolucao_ptoi_v1',notes:'tokids_relatorio_observacoes_v1'};
 const irText=value=>String(value??'').replace(/\\n/g,'\n');
 function irElement(tag,text,parent,cls){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined&&text!==null)el.textContent=irText(text);if(parent)parent.append(el);return el}
@@ -1916,6 +1921,7 @@ function ir46Notice(records){
 function irBuild(target,records,patient,notes,settings=ir44Settings()){
  target.replaceChildren();
  records=ir44Records(records,settings);
+ records=records.filter(r=>r.conteudo?.formato!==ir47Format);
  // Correção 45 — identificação documental e emissão, apenas na apresentação.
  const documentHead=irElement('div',null,target,'ir-document-head');
  irElement('strong','TO Kids PRO | Relatório clínico integrado',documentHead);
@@ -2155,13 +2161,33 @@ function comparison42Render(){
 for(const input of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])input.addEventListener('change',comparison42Render);
 comparison42Clear.onclick=()=>{for(const el of [comparison42AFrom,comparison42ATo,comparison42BFrom,comparison42BTo,comparison42Area])el.value='';comparison42Render()};
 
+// Histórico separado por paciente e sessão, usando os registros autorizados já carregados.
+function ir47Render(){
+ const box=ir('ir47-entries');if(!box)return;box.replaceChildren();
+ const p=ir46Patient();if(!p){box.textContent='Selecione um paciente fictício.';return}
+ const rows=allRecords.filter(r=>r.paciente_id===p.id&&r.conteudo?.formato===ir47Format)
+  .sort((a,b)=>String(b.criado_em||'').localeCompare(String(a.criado_em||'')));
+ if(!rows.length){box.textContent='Nenhuma solicitação de impressão registrada para este paciente.';return}
+ for(const r of rows){
+  const c=r.conteudo||{},item=document.createElement('details');item.className='history';
+  const title=document.createElement('summary');title.textContent='Solicitação de impressão · '+historyDisplayDate(r.criado_em);item.append(title);
+  irLine(item,'Profissional',c.profissional||'Não informado');irLine(item,'CREFITO',c.crefito||'Não informado');
+  irLine(item,'Paciente fictício',p.nome);
+  irLine(item,'Período', (c.periodo_de||'Início')+' até '+(c.periodo_ate||'Sem limite'));
+  irLine(item,'Seções',Array.isArray(c.secoes)?c.secoes.join(', '):'Não informadas');
+  irLine(item,'Registros clínicos considerados',c.total_registros);
+  irLine(item,'Identificador de rastreio',r.id);
+  irElement('p','Registro da solicitação; o navegador não confirma se houve impressão ou salvamento do PDF.',item,'ir-review-note');
+  box.append(item);
+ }
+}
 function irRender(){
  const p=ir46Patient(),pid=p?.id||null,records=p?irPatientRecords():[];
  if(ir46NotesPatient!==pid){ir46NotesPatient=pid;ir46NotesDirty=false;ir('ir-notes').value=p?irLatestNotes(records):''}
  else if(!ir46NotesDirty)ir('ir-notes').value=p?irLatestNotes(records):'';
  if(!ir44Validate()){ir('ir-preview').replaceChildren();ir46Notice(records);return}
  irBuild(ir('ir-preview'),records,p,ir('ir-notes').value);
- ir46Notice(records);results40Render();timeline41Render();comparison42Render();
+ ir46Notice(records);ir47Render();results40Render();timeline41Render();comparison42Render();
 }
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
 for(const el of ir44.querySelectorAll('input'))el.addEventListener('change',irRender);
@@ -2181,22 +2207,36 @@ ir('ir-save').onclick=async()=>{
  }catch(e){ir46Status('Não foi possível confirmar o salvamento: '+e.message+' Confira o histórico antes de repetir.')}
  finally{btn.disabled=false}
 };
-ir('ir-print').onclick=()=>{const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid);
+ir('ir-print').onclick=async()=>{const pid=ir('ir-patient').value,p=patientRows.find(x=>x.id===pid);
  if(!p||!pid||!patientRows.some(x=>x.id===pid)){ir('ir-status').textContent='Selecione um paciente fictício válido.';return}
  if(!professionalData.name||!professionalData.crefito){ir('ir-status').textContent='Antes de imprimir, preencha seu nome e CREFITO em Meu Perfil.';return}
  if(!ir46Ready())return;
- const records=irPatientRecords(),settings=ir44Settings(),filtered=ir44Records(records,settings);
+ const records=irPatientRecords(),settings=ir44Settings(),filtered=ir44Records(records,settings).filter(r=>r.conteudo?.formato!==ir47Format);
  if(!Object.values(settings.sections).some(Boolean)){ir46Status('Selecione ao menos uma seção para imprimir.');return}
  if(!filtered.some(r=>r.conteudo?.formato!==irFormats.notes)){ir46Status('Impressão bloqueada: não há registros clínicos para este paciente no período selecionado.');return}
  const patientCode=p.nome,period=(settings.from||'início')+' a '+(settings.to||'hoje');
  if(!window.confirm('Confirmar emissão do relatório fictício?\nPaciente: '+patientCode+'\nPeríodo: '+period+'\nRegistros no período: '+filtered.length+'\n\nVerifique a prévia e confirme que a conclusão é de sua autoria.')){ir46Status('Impressão cancelada para conferência.');return}
 
  const w=window.open('','_blank');if(!w){ir('ir-status').textContent='Permita janelas pop-up para imprimir.';return}
+ // O popup é aberto no clique; o registro deve ser confirmado antes de enviar para impressão.
+ const btn=ir('ir-print'),owner=clinicalSessionOwner,epoch=clinicalSessionEpoch;btn.disabled=true;
+ const chosen=ir44Choices.filter(([key])=>settings.sections[key]).map(([,label])=>label);
+ try{
+  const {data:auth,error:authError}=await client.auth.getUser();
+  if(authError||!auth?.user||auth.user.id!==owner||!clinicalSessionMatches(owner,epoch)||ir('ir-patient').value!==pid)throw Error('A sessão ou o paciente mudou. Tente novamente.');
+  const conteudo={formato:ir47Format,versao:1,periodo_de:settings.from||'',periodo_ate:settings.to||'',secoes:chosen,profissional:professionalData.name,crefito:professionalData.crefito,total_registros:filtered.filter(r=>r.conteudo?.formato!==irFormats.notes).length};
+  const {data:saved,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'relatorio_emissao',titulo:'Solicitação de impressão de relatório integrado',conteudo}).select('id').single();
+  if(error)throw error;if(!saved?.id)throw Error('O Supabase não confirmou o registro da solicitação.');
+  if(!clinicalSessionMatches(owner,epoch)||ir('ir-patient').value!==pid){w.close();ir46Status('Solicitação registrada, mas a sessão ou paciente mudou. Atualize o histórico antes de imprimir.');return}
+  // Atualiza o histórico local sem uma segunda escrita.
+  allRecords.unshift({id:saved.id,paciente_id:pid,tipo:'relatorio_emissao',titulo:'Solicitação de impressão de relatório integrado',conteudo,criado_em:new Date().toISOString()});ir47Render();
+ }catch(e){w.close();ir46Status('Não foi possível confirmar a solicitação de impressão: '+e.message+' Confira o histórico antes de tentar novamente.');return}
+ finally{btn.disabled=false}
  const d=w.document;d.title='Relatório de evolução terapêutica — TO Kids PRO';
  const st=d.createElement('style');st.textContent=`.ir-report-review{padding:9px 12px;margin:8px 0;border-left:3px solid #72aa9c;background:#f4faf8;break-inside:avoid} @page{size:A4;margin:17mm 16mm 18mm}*{box-sizing:border-box}body{font:12px/1.55 Arial,Helvetica,sans-serif;max-width:840px;margin:0 auto;color:#244640;background:#fff}body:before{content:'TO Kids PRO  |  TERAPIA OCUPACIONAL PEDIÁTRICA';display:block;background:#16665c;color:white;font-size:11px;font-weight:700;letter-spacing:1px;padding:16px 20px;margin-bottom:20px;border-radius:4px}h3{font-size:22px;color:#155c52;line-height:1.2;margin:0 0 20px}h4{font-size:15px;color:#176c60;border-bottom:2px solid #c8e5db;padding:7px 0;margin:25px 0 12px}h5{font-size:13px;color:#205b53;margin:13px 0 6px}.history{padding:13px 15px;border:1px solid #d2e5df;border-left:4px solid #2d8b7a;border-radius:5px;margin:12px 0;break-inside:avoid}p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}section{break-inside:auto}.ir-signature{text-align:center;border-top:2px solid #c8e5db;padding:28px 10px 8px;margin-top:36px;break-inside:avoid}.ir-signature>div,.ir-signature>strong{display:block;margin:4px}.ir-sign-line{letter-spacing:1px;margin-bottom:6px!important}.ir-disclaimer{font-size:10px;color:#687a76;text-align:center;margin-top:16px}.ir-assessment-audit{margin-top:14px;padding-top:10px;border-top:1px dashed #b7d5cc;font-size:11px}.ir-assessment-audit>strong{display:block;color:#176c60;margin:5px 0}.ir-audit-entry{padding:7px 0;border-top:1px solid #e2eeea;break-inside:avoid-page}.ir-audit-entry>strong{display:block}.ir-audit-note{font-size:10px;color:#61736f}body>p:last-child{border-top:1px solid #ddd;padding-top:8px}@media print{body{max-width:none}h4,h5{break-after:avoid-page;page-break-after:avoid}p{orphans:3;widows:3}.history{break-inside:avoid-page;page-break-inside:avoid}.ir-signature{break-inside:avoid-page;page-break-inside:avoid}body:before{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
  // Correção 45 — paginação CSS no navegador compatível, sem adulterar o conteúdo.
  st.textContent+=`@page{ @bottom-center{content:"Página " counter(page) " de " counter(pages);font:9px Arial,sans-serif;color:#60756f} } .ir-document-head{border:1px solid #d0e3dd;border-radius:6px;padding:10px 14px;margin-bottom:17px;background:#f8fcfa;break-inside:avoid-page}.ir-document-head>strong{display:block;color:#155c52;font-size:13px;margin-bottom:6px}.ir-document-head p{margin:3px 0}.ir-section-title{break-after:avoid-page}.ir-signature{break-inside:avoid-page;min-height:115px;padding-top:40px}.ir-disclaimer{break-inside:avoid-page}`;
- d.head.append(st);irBuild(d.body,irPatientRecords(),p,ir('ir-notes').value);d.close();w.focus();w.print();ir('ir-status').textContent='Na janela de impressão, desmarque Cabeçalhos e rodapés em Mais configurações para ocultar about:blank, data e numeração automática.'
+ d.head.append(st);irBuild(d.body,irPatientRecords(),p,ir('ir-notes').value);d.close();w.focus();w.print();ir('ir-status').textContent='Solicitação registrada no Supabase (isso não confirma a impressão). Na janela de impressão, desmarque Cabeçalhos e rodapés em Mais configurações para ocultar about:blank, data e numeração automática.'
 };
 const irOriginalRefresh=refreshData;
 refreshData=async function(...args){const result=await irOriginalRefresh(...args);ir46DataReady=!!result;irSync();return result};
