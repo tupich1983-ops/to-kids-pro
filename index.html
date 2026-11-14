@@ -1818,6 +1818,13 @@ integratedReport.insertBefore(ir46Warning,document.getElementById('ir-preview'))
 const ir47History=document.createElement('section');ir47History.id='ir47-history';
 ir47History.innerHTML='<h4>Histórico de relatórios preparados para impressão</h4><p style="font-size:13px">Cada entrada registra uma solicitação de impressão confirmada e encaminhada ao navegador. Não comprova que o PDF foi salvo ou impresso. O conteúdo do relatório não é armazenado aqui.</p><div id="ir47-entries" role="status"></div>';
 integratedReport.append(ir47History);
+// Correção 48 — filtros de consulta do histórico, exclusivamente locais.
+const ir48Filters=document.createElement('div');ir48Filters.className='history-filter-bar';
+ir48Filters.innerHTML='<label for="ir48-from">Emitidos de<input id="ir48-from" type="date"></label><label for="ir48-to">Até<input id="ir48-to" type="date"></label><button type="button" class="secondary" id="ir48-clear">Limpar filtros</button>';
+ir47History.insertBefore(ir48Filters,ir('ir47-entries'));
+const ir48Count=document.createElement('p');ir48Count.id='ir48-count';ir48Count.setAttribute('role','status');ir48Count.style.cssText='font-size:13px;color:#496b63';
+ir47History.insertBefore(ir48Count,ir('ir47-entries'));
+
 
 const report43Style=document.createElement('style');
 report43Style.textContent='#ir-preview .ir-report-review{margin:8px 0;padding:9px 12px;border-left:3px solid #72aa9c;background:#f4faf8;border-radius:4px}#ir-preview .ir-report-review p{margin:4px 0}';
@@ -2164,10 +2171,14 @@ comparison42Clear.onclick=()=>{for(const el of [comparison42AFrom,comparison42AT
 // Histórico separado por paciente e sessão, usando os registros autorizados já carregados.
 function ir47Render(){
  const box=ir('ir47-entries');if(!box)return;box.replaceChildren();
- const p=ir46Patient();if(!p){box.textContent='Selecione um paciente fictício.';return}
- const rows=allRecords.filter(r=>r.paciente_id===p.id&&r.conteudo?.formato===ir47Format)
+ const p=ir46Patient();if(!p){if(ir('ir48-count'))ir('ir48-count').textContent='';box.textContent='Selecione um paciente fictício.';return}
+ const all=allRecords.filter(r=>r.paciente_id===p.id&&r.conteudo?.formato===ir47Format);
+ const from=ir('ir48-from')?.value||'',to=ir('ir48-to')?.value||'',counter=ir('ir48-count');
+ if(from&&to&&from>to){if(counter)counter.textContent='A data inicial não pode ser posterior à data final.';box.textContent='Corrija o período para consultar o histórico.';return}
+ const rows=all.filter(r=>{const date=historyRecordDate(r);return (!from||(date&&date>=from))&&(!to||(date&&date<=to))})
   .sort((a,b)=>String(b.criado_em||'').localeCompare(String(a.criado_em||'')));
- if(!rows.length){box.textContent='Nenhuma solicitação de impressão registrada para este paciente.';return}
+ if(counter)counter.textContent='Exibindo '+rows.length+' de '+all.length+' solicitação(ões) deste paciente.';
+ if(!rows.length){box.textContent=all.length?'Nenhuma solicitação corresponde ao período selecionado.':'Nenhuma solicitação de impressão registrada para este paciente.';return}
  for(const r of rows){
   const c=r.conteudo||{},item=document.createElement('details');item.className='history';
   const title=document.createElement('summary');title.textContent='Solicitação de impressão · '+historyDisplayDate(r.criado_em);item.append(title);
@@ -2181,6 +2192,8 @@ function ir47Render(){
   box.append(item);
  }
 }
+for(const id of ['ir48-from','ir48-to'])ir(id).addEventListener('change',ir47Render);
+ir('ir48-clear').onclick=()=>{ir('ir48-from').value='';ir('ir48-to').value='';ir47Render()};
 function irRender(){
  const p=ir46Patient(),pid=p?.id||null,records=p?irPatientRecords():[];
  if(ir46NotesPatient!==pid){ir46NotesPatient=pid;ir46NotesDirty=false;ir('ir-notes').value=p?irLatestNotes(records):''}
