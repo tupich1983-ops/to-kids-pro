@@ -830,7 +830,7 @@ $('signup-submit').onclick=async()=>{
  if(password!==confirm)return msg('As senhas não coincidem.',true);
  if(!client)return msg('Conexão com Supabase indisponível. Atualize a página.',true);
  button.disabled=true;
- try{const {error}=await client.auth.signUp({email,password});if(error)throw error;
+ try{const emailRedirectTo=location.origin+location.pathname;const {error}=await client.auth.signUp({email,password,options:{emailRedirectTo}});if(error)throw error;
   $('signup-panel').hidden=true;$('email').value=email;$('password').value='';
   msg('Cadastro solicitado. Verifique seu e-mail para confirmar a conta antes de entrar.');
  }catch(e){msg('Não foi possível criar a conta: '+(e?.message||'erro desconhecido'),true)}
