@@ -84,6 +84,19 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
  #resources .quicktools button{flex:1 1 100%}
  #resources iframe{min-height:360px}
 }
+
+/* Correção 54 — impressão segura e legível da interface clínica (não altera relatórios em janelas próprias). */
+@media print{
+ @page{size:A4;margin:15mm}
+ body{background:#fff!important;color:#172f2b!important;font:11pt/1.45 Arial,sans-serif}
+ main{max-width:none!important;margin:0!important;padding:0!important}
+ #gate,#dashboard,.dashboard-grid,.dashboard-head,.work-toolbar,.topnav,#logout,.quicktools,#persistence52,#historyclear,.history-filter-bar,button,iframe,#resources,.note{display:none!important}
+ #app,.workspace,.workpanel,.workspace>.workpanel>section,section{background:#fff!important;box-shadow:none!important;border:0!important;padding:0!important;margin:0!important;max-width:none!important}
+ .history,.history-clinical-entry{break-inside:avoid-page;page-break-inside:avoid;overflow-wrap:anywhere}
+ h1,h2,h3,h4,summary{break-after:avoid-page;page-break-after:avoid}
+ p,div,article{overflow-wrap:anywhere}
+ textarea,input,select{border:0!important;padding:0!important;background:transparent!important;color:#172f2b!important}
+}
 </style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p></div>
 <div class="dashboard-grid" id="dashboard" aria-label="Módulos principais">
 <button class="dashboard-tile" type="button" data-page="patients"><span class="tile-icon">👶</span>Pacientes</button>
@@ -335,15 +348,28 @@ async function refreshData(){
   const {data:auth,error:ue}=await client.auth.getUser();
   if(ue||!auth?.user||auth.user.id!==owner)throw Error('Sessão não confirmada.');
   if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
-  const {data:pts,error:pe}=await client.from('pacientes').select('id,nome,dados,data_nascimento,criado_em').order('criado_em',{ascending:false});
-  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
-  if(pe)throw pe;
-  const {data:rs,error:re}=await client.from('registros_clinicos').select('id,paciente_id,tipo,titulo,conteudo,criado_em').order('criado_em',{ascending:false});
-  if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return false;
-  if(re)throw re;
+   // Correção 54: leituras paginadas evitam o limite padrão de linhas do Supabase.
+   // Não publica dados parciais: qualquer erro mantém a visualização anterior.
+   const fetchAll54=async(table,columns)=>{
+    const rows=[],pageSize=500;
+    for(let offset=0;;offset+=pageSize){
+     if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return null;
+     const {data,error}=await client.from(table).select(columns).order('id',{ascending:true}).range(offset,offset+pageSize-1);
+     if(!clinicalSessionMatches(owner,epoch)||serial!==clinicalLoadSerial)return null;
+     if(error)throw error;
+     rows.push(...(data||[]));
+     if((data||[]).length<pageSize)break;
+     if(offset>=99500)throw Error('Quantidade de registros acima do limite de conferência; solicite revisão técnica.');
+    }
+    return rows;
+   };
+   const pts=await fetchAll54('pacientes','id,nome,dados,data_nascimento,criado_em');
+   if(pts===null)return false;
+   const rs=await fetchAll54('registros_clinicos','id,paciente_id,tipo,titulo,conteudo,criado_em');
+   if(rs===null)return false;
   // Só publicar os dois conjuntos após ambas as consultas terminarem bem.
   const unique=(rows)=>[...new Map((rows||[]).filter(x=>x?.id).map(x=>[x.id,x])).values()];
-  const freshPatients=unique(pts),freshRecords=unique(rs);
+  const freshPatients=unique(pts).sort((a,b)=>String(b.criado_em||'').localeCompare(String(a.criado_em||''))),freshRecords=unique(rs).sort((a,b)=>String(b.criado_em||'').localeCompare(String(a.criado_em||'')));
   const remembered=readActivePatient(owner);
   const nextPatient=freshPatients.some(p=>p.id===selectedPatientId)?selectedPatientId:
     freshPatients.some(p=>p.id===remembered)?remembered:(freshPatients[0]?.id||null);
