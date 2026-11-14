@@ -1824,6 +1824,8 @@ ir48Filters.innerHTML='<label for="ir48-from">Emitidos de<input id="ir48-from" t
 ir47History.insertBefore(ir48Filters,ir('ir47-entries'));
 const ir48Count=document.createElement('p');ir48Count.id='ir48-count';ir48Count.setAttribute('role','status');ir48Count.style.cssText='font-size:13px;color:#496b63';
 ir47History.insertBefore(ir48Count,ir('ir47-entries'));
+// Correção 49: detalhes de emissão expansíveis, somente leitura.
+const ir49Style=document.createElement('style');ir49Style.textContent='.ir49-entry summary{cursor:pointer;font-weight:700;color:#164b4c}.ir49-detail{padding:8px 4px 4px;overflow-wrap:anywhere}.ir49-detail p{margin:9px 0}';document.head.append(ir49Style);
 
 
 const report43Style=document.createElement('style');
@@ -2180,15 +2182,21 @@ function ir47Render(){
  if(counter)counter.textContent='Exibindo '+rows.length+' de '+all.length+' solicitação(ões) deste paciente.';
  if(!rows.length){box.textContent=all.length?'Nenhuma solicitação corresponde ao período selecionado.':'Nenhuma solicitação de impressão registrada para este paciente.';return}
  for(const r of rows){
-  const c=r.conteudo||{},item=document.createElement('details');item.className='history';
-  const title=document.createElement('summary');title.textContent='Solicitação de impressão · '+historyDisplayDate(r.criado_em);item.append(title);
-  irLine(item,'Profissional',c.profissional||'Não informado');irLine(item,'CREFITO',c.crefito||'Não informado');
-  irLine(item,'Paciente fictício',p.nome);
-  irLine(item,'Período', (c.periodo_de||'Início')+' até '+(c.periodo_ate||'Sem limite'));
-  irLine(item,'Seções',Array.isArray(c.secoes)?c.secoes.join(', '):'Não informadas');
-  irLine(item,'Registros clínicos considerados',c.total_registros);
-  irLine(item,'Identificador de rastreio',r.id);
-  irElement('p','Registro da solicitação; o navegador não confirma se houve impressão ou salvamento do PDF.',item,'ir-review-note');
+  const c=r.conteudo||{},item=document.createElement('details');item.className='history ir49-entry';
+  const title=document.createElement('summary');title.textContent='Relatório preparado · '+historyDisplayDate(r.criado_em);item.append(title);
+  const body=document.createElement('div');body.className='ir49-detail';item.append(body);
+  irElement('p','Dados registrados no momento da solicitação de impressão. Não representam comprovante de PDF salvo.',body,'ir-review-note');
+  irLine(body,'Data e horário da solicitação',historyDisplayDate(r.criado_em));
+  irLine(body,'Profissional responsável',c.profissional||'Não informado');
+  irLine(body,'CREFITO informado',c.crefito||'Não informado');
+  irLine(body,'Paciente fictício',p.nome);
+  irLine(body,'Período do relatório', (c.periodo_de?irDateBR(c.periodo_de):'Início dos registros')+' até '+(c.periodo_ate?irDateBR(c.periodo_ate):'Data da emissão'));
+  const sectionNames={summary:'Resumo clínico',assessments:'Avaliações',goals:'Metas e acompanhamento',evolutions:'Evoluções clínicas',notes:'Observações e conclusão'};
+  const sectionList=Array.isArray(c.secoes)?c.secoes.map(x=>sectionNames[x]||String(x)):[];
+  irLine(body,'Seções incluídas',sectionList.length?sectionList.join(' · '):'Não informadas no registro');
+  irLine(body,'Quantidade de registros considerados',c.total_registros);
+  irLine(body,'Identificador de rastreio',r.id);
+  if(r.id){const copy=document.createElement('button');copy.type='button';copy.className='secondary';copy.textContent='Copiar identificador';copy.style.cssText='font-size:13px;padding:8px 12px;margin:4px 0';copy.onclick=async()=>{try{await navigator.clipboard.writeText(String(r.id));copy.textContent='Identificador copiado';}catch(e){copy.textContent='Não foi possível copiar automaticamente';}};body.append(copy);}
   box.append(item);
  }
 }
