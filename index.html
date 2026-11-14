@@ -2017,6 +2017,50 @@ function irBuild(target,records,patient,notes,settings=ir44Settings()){
  irElement('p','Espaço para assinatura manual ou assinatura eletrônica válida; o sistema não assina automaticamente.',sign,'ir-disclaimer');
  irElement('p','DOCUMENTO FICTÍCIO — ambiente de testes. Não utilizar como laudo ou prontuário real.',target,'ir-disclaimer');
 }
+// Correção 51 — conferência documental da integração, sem escrita no banco.
+const integration51=document.createElement('section');integration51.id='integration51';
+integration51.style.cssText='border:1px solid #b7d9d0;border-radius:12px;padding:14px;margin:12px 0;background:#f8fcfa';
+integration51.setAttribute('aria-label','Conferência de integração clínica');
+ir('ir-preview').before(integration51);
+function integration51Render(){
+ const box=integration51;box.replaceChildren();
+ irElement('h4','Conferência da integração clínica — Correção 51',box);
+ irElement('p','Verificação documental de avaliação, metas, evoluções e relatório. Não representa avaliação de qualidade, diagnóstico ou eficácia clínica.',box,'ptoi-note');
+ const p=ir46Patient();if(!p){irElement('p','Selecione um paciente fictício para conferir os registros.',box);return}
+ const records=irPatientRecords(),format=r=>r.conteudo?.formato;
+ const assessments=records.filter(r=>irFormats.assessment.includes(format(r))||(r.tipo==='avaliacao'&&r.conteudo?.modulo));
+ const goals=records.filter(r=>format(r)===irFormats.goal);
+ const evolutions=records.filter(r=>format(r)===irFormats.evolution);
+ const tracks=records.filter(r=>format(r)===irFormats.tracking);
+ const reviews=records.filter(r=>format(r)==='tokids_ptoi_revisao_v1');
+ const legacyEvolutions=records.filter(r=>r.tipo==='evolucao'&&r.conteudo?.modulo==='evolucao');
+ const notes=records.filter(r=>format(r)===irFormats.notes);
+ const goalIds=new Set(goals.map(r=>String(r.conteudo?.meta_id||'').trim()).filter(Boolean));
+ const links=[...evolutions,...tracks,...reviews];
+ const orphan=links.filter(r=>!String(r.conteudo?.meta_id||'').trim()||!goalIds.has(String(r.conteudo.meta_id).trim()));
+ const goalsWithoutId=goals.filter(r=>!String(r.conteudo?.meta_id||'').trim());
+ const duplicateIds=[...goalIds].filter(id=>goals.filter(r=>String(r.conteudo?.meta_id||'').trim()===id).length>1);
+ const linkedGoalIds=new Set(links.filter(r=>goalIds.has(String(r.conteudo?.meta_id||'').trim())).map(r=>String(r.conteudo.meta_id).trim()));
+ const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:8px;margin:12px 0';
+ for(const [name,count] of [['Avaliações documentadas',assessments.length],['Metas PTOI',goals.length],['Evoluções PTOI',evolutions.length],['Acompanhamentos',tracks.length],['Revisões de metas',reviews.length],['Outras evoluções',legacyEvolutions.length]]){
+  const tile=irElement('div',null,grid);tile.style.cssText='background:white;border:1px solid #d4e5de;border-radius:8px;padding:10px';
+  const number=irElement('strong',String(count),tile);number.style.cssText='display:block;font-size:22px;color:#147d71';irElement('span',name,tile);
+ }box.append(grid);
+ const issues=[];
+ if(!assessments.length)issues.push('Não há avaliação estruturada ou avaliação modular documentada neste paciente.');
+ if(!goals.length)issues.push('Não há metas PTOI cadastradas; confira o planejamento terapêutico.');
+ if(goalsWithoutId.length)issues.push(goalsWithoutId.length+' meta(s) sem identificador de vínculo.');
+ if(duplicateIds.length)issues.push(duplicateIds.length+' identificador(es) de meta repetido(s); confira possíveis duplicidades.');
+ if(orphan.length)issues.push(orphan.length+' registro(s) de evolução, acompanhamento ou revisão sem meta PTOI correspondente neste paciente.');
+ if(goals.length&&!linkedGoalIds.size)issues.push('Nenhuma meta possui evolução, acompanhamento ou revisão vinculada nos registros carregados.');
+ const reportSections=ir44Settings().sections;
+ if(!Object.values(reportSections).some(Boolean))issues.push('Nenhuma seção foi selecionada para o relatório integrado.');
+ if(!notes.length)irElement('p','Observações/conclusões do relatório: nenhum texto salvo anteriormente. O terapeuta pode redigir a conclusão no campo próprio.',box,'ptoi-note');
+ if(issues.length){irElement('strong','Pontos para conferência ('+issues.length+')',box);for(const message of issues)irElement('p','• '+message,box,'ir-review-note')}
+ else irElement('p','Não foram encontrados vínculos inconsistentes nas categorias verificadas. Isso não substitui a revisão clínica e não garante completude dos registros.',box,'ptoi-note');
+ if(orphan.length){const detail=irElement('details',null,box,'history');irElement('summary','Ver registros com vínculos a conferir ('+orphan.length+')',detail);for(const r of orphan){const c=r.conteudo||{};irElement('p',(r.titulo||'Registro')+' · '+irDate(r)+' · meta_id: '+(c.meta_id||'não informado')+' · ID do registro: '+(r.id||'não informado'),detail)}}
+ irElement('p','A conferência utiliza apenas registros deste paciente já carregados do Supabase. Metas sem atividade recente não significam ausência de atendimento. Nenhum dado foi modificado.',box,'ptoi-note');
+}
 // Correção 40 — Fase 3: indicadores descritivos, sem inferência de eficácia clínica.
 const results40=document.createElement('section');
 results40.id='results40';results40.style.cssText='border:1px solid #b7d9d0;border-radius:12px;padding:14px;margin:12px 0;background:#f8fcfa';
@@ -2218,7 +2262,7 @@ function irRender(){
  else if(!ir46NotesDirty)ir('ir-notes').value=p?irLatestNotes(records):'';
  if(!ir44Validate()){ir('ir-preview').replaceChildren();ir46Notice(records);return}
  irBuild(ir('ir-preview'),records,p,ir('ir-notes').value);
- ir46Notice(records);ir47Render();results40Render();timeline41Render();comparison42Render();
+ ir46Notice(records);ir47Render();integration51Render();results40Render();timeline41Render();comparison42Render();
 }
 function irSync(){const sel=ir('ir-patient'),old=sel.value;sel.replaceChildren();for(const p of patientRows){const o=document.createElement('option');o.value=p.id;o.textContent=p.nome;sel.append(o)}if(patientRows.some(p=>p.id===selectedPatientId))sel.value=selectedPatientId;else if(patientRows.some(p=>p.id===old))sel.value=old;irRender()}
 for(const el of ir44.querySelectorAll('input'))el.addEventListener('change',irRender);
