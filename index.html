@@ -2133,9 +2133,19 @@ function comparison42Render(){
  comparison42.append(comparison42Controls,comparison42Clear,comparison42Body);comparison42Body.replaceChildren();
  const pid=ir('ir-patient').value;if(!pid||!patientRows.some(p=>p.id===pid)){irElement('p','Selecione um paciente fictício.',comparison42Body);return}
  const rs=allRecords.filter(r=>r.paciente_id===pid),goals=rs.filter(r=>r.conteudo?.formato==='tokids_ptoi_meta_v1');
- const previous=comparison42Area.value,areas=[...new Set(goals.map(g=>String(g.conteudo?.area||'Não informada').trim()||'Não informada'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+ // Correção 50: mostrar todos os domínios configurados no PTOI, mesmo sem metas.
+ // A lista é lida do próprio formulário, evitando divergência com os nomes oficiais.
+ const previous=comparison42Area.value;
+ const configured=[...document.querySelectorAll('#ptoi-domain option')].map(o=>o.value||o.textContent.trim()).filter(Boolean);
+ const recorded=goals.map(g=>String(g.conteudo?.area||'Não informada').trim()||'Não informada');
+ const areas=[...new Set([...configured,...recorded])];
+ const goalCount=new Map();for(const area of recorded)goalCount.set(area,(goalCount.get(area)||0)+1);
  comparison42Area.replaceChildren();const optAll=document.createElement('option');optAll.value='';optAll.textContent='Todas as áreas';comparison42Area.append(optAll);
- for(const area of areas){const o=document.createElement('option');o.value=area;o.textContent=area;comparison42Area.append(o)}comparison42Area.value=areas.includes(previous)?previous:'';
+ for(const area of areas){const o=document.createElement('option');o.value=area;o.textContent=area+(goalCount.has(area)?' ('+goalCount.get(area)+' meta(s))':' — sem metas cadastradas');comparison42Area.append(o)}
+ comparison42Area.value=areas.includes(previous)?previous:'';
+ const currentArea=comparison42Area.value;
+ if(currentArea&&!goalCount.has(currentArea))irElement('p','Esta área ainda não possui metas cadastradas no PTOI deste paciente. O comparativo exibirá zero registros vinculados; isso não significa ausência de necessidades terapêuticas.',comparison42Body,'ptoi-note');
+ else if(!currentArea)irElement('p','O filtro apresenta todas as áreas do PTOI. Áreas sem metas estão identificadas no menu e não geram dados de evolução.',comparison42Body,'ptoi-note');
  const aFrom=comparison42AFrom.value,aTo=comparison42ATo.value,bFrom=comparison42BFrom.value,bTo=comparison42BTo.value;
  if((aFrom&&aTo&&aFrom>aTo)||(bFrom&&bTo&&bFrom>bTo)){irElement('p','A data inicial não pode ser posterior à data final.',comparison42Body,'err');return}
  if(!aFrom||!aTo||!bFrom||!bTo){irElement('p','Preencha as quatro datas para comparar dois períodos completos.',comparison42Body,'ptoi-note');return}
@@ -2155,7 +2165,7 @@ function comparison42Render(){
  for(const [key,label] of [['Manter meta','Últimas revisões no período: manter'],['Ajustar meta','Últimas revisões no período: ajustar'],['Concluir meta','Últimas revisões no período: concluir']])tr42(label,a.decisions[key],b.decisions[key]);
  irElement('p','As decisões são contabilizadas pela última revisão de cada meta DENTRO de cada período. Uma meta sem revisão naquele intervalo não recebe situação presumida.',comparison42Body,'ptoi-note');
  irElement('h5','Síntese descritiva por meta',comparison42Body);
- if(!selected.length){irElement('p','Nenhuma meta cadastrada para a área selecionada.',comparison42Body);return}
+ if(!selected.length){irElement('p','Nenhuma meta cadastrada para a área selecionada. Não há registros vinculados a comparar neste período.',comparison42Body);return}
  for(const g of selected){const id=g.conteudo?.meta_id;if(!id)continue;const box=irElement('details',null,comparison42Body,'history');const title=irElement('summary',String(g.conteudo?.meta||'Meta sem descrição').slice(0,180),box);
   irElement('p','Área: '+(g.conteudo?.area||'Não informada')+' · Prazo: '+(g.conteudo?.prazo||'Não informado'),box,'ptoi-note');
   for(const [label,part] of [['Período A',a],['Período B',b]]){const ev=part.subset.filter(x=>x.r.conteudo?.meta_id===id);const review=part.latest.get(id)?.r.conteudo;
