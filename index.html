@@ -104,7 +104,11 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 .release55 ol{padding-left:22px;margin:10px 0}.release55 li{margin:7px 0;overflow-wrap:anywhere}
 .release55 p{margin:9px 0;font-size:14px}
 @media print{#release55{display:none!important}}
-</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p>
+/* Controle de acesso — teste gratuito */
+#access-gate{border:1px solid #e1c98a;background:#fff9e9}
+#access-gate h3{margin-top:0}#access-gate p{line-height:1.5}
+#access-gate button{min-height:44px}
+</style></head><body><header><h2>TO Kids PRO 6.9.1 — Paciente ativo • Teste integrado</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><p class="note"><b>Somente para testes com dados fictícios.</b> Os módulos novos usam Supabase, mas o painel legado 5.9 permanece local e não sincronizado. Não use dados reais.</p><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup">Criar conta</button><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="access-gate" hidden role="region" aria-label="Situação do acesso"><h3>Acesso ao TO Kids PRO</h3><p id="access-message" role="status" aria-live="polite">Verificando autorização…</p><button type="button" id="access-retry" class="secondary">Verificar novamente</button><button type="button" id="access-logout" class="secondary">Sair da conta</button></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 6.9.1 — Paciente ativo</h2><p>Escolha um módulo para começar. Ambiente de testes com dados fictícios.</p>
 <details id="release55" class="release55" aria-label="Verificações antes do lançamento"><summary>TO Kids PRO 7.0 — checklist de validação final</summary>
 <p><strong>Versão candidata a lançamento.</strong> Este painel não certifica a segurança do aplicativo. Continue usando somente dados fictícios até concluir as verificações.</p>
 <ol><li>Em duas contas diferentes, confirme que uma não consegue visualizar, alterar ou excluir pacientes e registros da outra (políticas RLS no Supabase).</li>
@@ -748,30 +752,72 @@ $('resourceslink').addEventListener('click',()=>{setTimeout(()=>showTool('librar
 
 $('refresh').onclick=refreshData;
 function msg(t,error=false){$('status').textContent=t;$('status').className=error?'err':''}
+// A autorização é verificada pelo banco, não por relógio ou armazenamento local.
+// A interface não é uma barreira de segurança: as políticas RLS devem proteger as tabelas.
+let accessCheckSerial=0;
+function accessShow(message,show=true){
+ $('access-gate').hidden=!show;
+ $('access-message').textContent=message||'';
+}
 async function display(session){
+ const serial=++accessCheckSerial;
  const owner=session?.user?.id||null;
+ // Fechar imediatamente o painel antes de qualquer consulta assíncrona.
+ $('app').hidden=true;
  if(!owner){
   clinicalInvalidate();
-  $('gate').hidden=false;$('app').hidden=true;
+  $('gate').hidden=false;accessShow('',false);
   resetSubscriptionStatus();
   return;
  }
- if(clinicalSessionOwner!==owner){
+ $('gate').hidden=true;
+ accessShow('Conferindo o período de teste ou a assinatura no Supabase…');
+ try{
+  if(!client)throw Error('Conexão com Supabase indisponível.');
+  const {data:verified,error:verifyError}=await client.auth.getUser();
+  if(serial!==accessCheckSerial)return;
+  if(verifyError||verified?.user?.id!==owner)throw Error('Sessão não confirmada. Entre novamente.');
+  const {data:authorized,error:accessError}=await client.rpc('tokids_acesso_autorizado');
+  if(serial!==accessCheckSerial)return;
+  if(accessError)throw accessError;
+  if(authorized!==true){
+   clinicalInvalidate();
+   accessShow('Seu período de teste gratuito terminou ou sua conta não possui uma assinatura ativa. Seus dados não foram apagados. Para continuar, regularize o acesso e clique em Verificar novamente.');
+   return;
+  }
+  accessShow('',false);
+  if(clinicalSessionOwner!==owner){clinicalInvalidate();clinicalSessionOwner=owner;}
+  const epoch=clinicalSessionEpoch;
+  wizardSetOwner(owner);
+  profileFromUser(verified.user);
+  $('app').hidden=false;
+  $('who').textContent=verified.user.email||'';
+  if(!$('frame').getAttribute('src'))$('frame').src='painel.html';
+  void loadProfessionalProfile();
+  void refreshSubscriptionStatus();
+  void refreshSubscriptionRequests();
+  await refreshData();
+  if(serial===accessCheckSerial&&clinicalSessionMatches(owner,epoch))wizardSwitch();
+ }catch(e){
+  if(serial!==accessCheckSerial)return;
   clinicalInvalidate();
-  clinicalSessionOwner=owner;
+  accessShow('Não foi possível confirmar sua autorização no Supabase. Nenhum dado foi alterado. Verifique a conexão e tente novamente. Detalhes: '+(e?.message||'erro desconhecido'));
  }
- const epoch=clinicalSessionEpoch;
- wizardSetOwner(owner);
- profileFromUser(session.user);
- $('gate').hidden=true;$('app').hidden=false;
- $('who').textContent=session.user.email||'';
- if(!$('frame').getAttribute('src'))$('frame').src='painel.html';
- void loadProfessionalProfile();
- void refreshSubscriptionStatus();
- void refreshSubscriptionRequests();
- await refreshData();
- if(clinicalSessionMatches(owner,epoch))wizardSwitch();
 }
+$('access-retry').onclick=async()=>{
+ if(!client)return accessShow('Conexão indisponível. Recarregue a página.');
+ const {data:{session},error}=await client.auth.getSession();
+ if(error||!session){await display(null);msg('Sua sessão expirou. Entre novamente.',true);return;}
+ await display(session);
+};
+$('access-logout').onclick=async()=>{
+ ++accessCheckSerial;
+ const owner=clinicalSessionOwner;
+ if(client)await client.auth.signOut();
+ clearActivePatient(owner);
+ await display(null);
+ msg('Sessão encerrada.');
+};
 $('login').onclick=async()=>{if(!client)return;const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)return msg(error.message,true);await display(data.session)};
 $('signup').onclick=async()=>{if(!client)return;const {error}=await client.auth.signUp({email:$('email').value.trim(),password:$('password').value});msg(error?error.message:'Cadastro solicitado. Confirme o e-mail antes de entrar.',!!error)};
 // Fluxo oficial Supabase Auth: solicita link, valida a sessão de recuperação e troca a senha.
@@ -809,7 +855,7 @@ $('save-new-password').onclick=async()=>{
  finally{$('save-new-password').disabled=false}
 };
 $('cancel-password-recovery').onclick=async()=>{if(client)await client.auth.signOut();leaveRecoveryMode();history.replaceState(null,'',location.pathname);msg('Volte ao login ou solicite outro link de recuperação.');};
-$('logout').onclick=async()=>{const owner=clinicalSessionOwner;if(client)await client.auth.signOut();clearActivePatient(owner);await display(null);msg('Sessão encerrada.');};
+$('logout').onclick=async()=>{++accessCheckSerial;const owner=clinicalSessionOwner;if(client)await client.auth.signOut();clearActivePatient(owner);await display(null);msg('Sessão encerrada.');};
 
 // Configuração pública do projeto. Nunca inclua chaves secretas ou senhas aqui.
 const PUBLIC_SUPABASE_URL='https://pmndyeccfbnjikivfapj.supabase.co';
