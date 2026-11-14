@@ -60,7 +60,7 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 <iframe id="frame" title="Recursos terapêuticos e biblioteca do TO Kids PRO 5.9" loading="eager"></iframe>
 </section>
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Painel clínico — ambiente de teste</b><div id="who"></div></div><button id="logout" class="secondary">Sair</button></div><p class="note"><b>Teste 6.9.1:</b> os pacientes e registros criados nos formulários abaixo são salvos no Supabase. Os formulários novos abaixo salvam no Supabase. O painel legado 5.9 continua local, sem sincronização, e sua URL direta não é protegida por login. Não cadastre pacientes reais.</p>
-<section><h3>Pacientes fictícios — Supabase</h3><label>Código fictício</label><input id="newcode" placeholder="EX.: TESTE-003"><label>Data de nascimento fictícia</label><input type="date" id="newbirth"><label>Faixa etária (opcional, para cadastros sem data)</label><input id="newage" placeholder="Ex.: 4 anos ou 6 meses"><label>Diagnóstico informado (opcional)</label><select id="newdiagnosis"><option value="">Sem diagnóstico informado</option><option>TEA</option><option>TDAH</option><option>Paralisia cerebral</option><option>Síndrome de Down</option><option>Deficiência intelectual</option><option>Atraso do desenvolvimento</option><option>Outro</option></select><label>Outro diagnóstico / condições associadas (opcional)</label><input id="newdiagnosisother" placeholder="Descrição fictícia"><label>Situação diagnóstica</label><select id="newdiagnosisstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="createpatient">Salvar paciente no Supabase</button><button id="refresh" class="secondary">Atualizar lista</button><p id="patientfeedback" role="status"></p><h4>Pacientes cadastrados — clique para abrir</h4><div id="patientlist"></div><article id="patientprofile" class="history" hidden><h3 id="selectedname"></h3><p id="selectedmeta"></p><label>Atualizar data de nascimento fictícia</label><input type="date" id="editbirth"><label>Diagnóstico informado</label><input id="editdiagnosis" placeholder="Opcional"><label>Situação diagnóstica</label><select id="editstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="updatepatient" type="button">Atualizar cadastro</button><h4>Histórico do paciente</h4><div class="history-filter-bar" role="group" aria-label="Filtros do histórico clínico"><label for="historytype">Tipo de registro<select id="historytype"><option value="">Todos os tipos</option></select></label><label for="historyfrom">De<input id="historyfrom" type="date"></label><label for="historyto">Até<input id="historyto" type="date"></label><button type="button" class="secondary" id="historyclear">Limpar filtros</button></div><p id="historycount" role="status" aria-live="polite"></p><div id="patienthistory"></div><h4>Sugestões iniciais por faixa etária</h4><div id="patientrecommendations"></div><p class="note">Sugestões educativas por idade, não prescrições. Considere avaliação individual e preferências da criança.</p><button id="patientactivities" type="button">Abrir biblioteca de atividades</button><button id="patientassessment" type="button" class="secondary">Abrir avaliação completa</button></article></section>
+<section><h3>Pacientes fictícios — Supabase</h3><label>Código fictício</label><input id="newcode" placeholder="EX.: TESTE-003"><label>Data de nascimento fictícia</label><input type="date" id="newbirth"><label>Faixa etária (opcional, para cadastros sem data)</label><input id="newage" placeholder="Ex.: 4 anos ou 6 meses"><label>Diagnóstico informado (opcional)</label><select id="newdiagnosis"><option value="">Sem diagnóstico informado</option><option>TEA</option><option>TDAH</option><option>Paralisia cerebral</option><option>Síndrome de Down</option><option>Deficiência intelectual</option><option>Atraso do desenvolvimento</option><option>Outro</option></select><label>Outro diagnóstico / condições associadas (opcional)</label><input id="newdiagnosisother" placeholder="Descrição fictícia"><label>Situação diagnóstica</label><select id="newdiagnosisstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="createpatient">Salvar paciente no Supabase</button><button id="refresh" class="secondary">Atualizar lista</button><p id="patientfeedback" role="status"></p><h4>Pacientes cadastrados — clique para abrir</h4><div id="patientlist"></div><article id="patientprofile" class="history" hidden><h3 id="selectedname"></h3><p id="selectedmeta"></p><label>Atualizar data de nascimento fictícia</label><input type="date" id="editbirth"><label>Diagnóstico informado</label><input id="editdiagnosis" placeholder="Opcional"><label>Situação diagnóstica</label><select id="editstatus"><option value="nao_informado">Não informado</option><option value="confirmado">Informado como confirmado</option><option value="investigacao">Em investigação</option></select><button id="updatepatient" type="button">Atualizar cadastro</button><h4>Histórico do paciente</h4><div id="persistence52" class="history" role="region" aria-label="Conferência de persistência no Supabase"><strong>Correção 52 — Conferência de persistência</strong><p style="font-size:13px">Consulta de leitura diretamente ao Supabase para conferir os registros do paciente ativo. Não altera nem duplica dados.</p><button type="button" class="secondary" id="persistence52-check">Conferir dados no Supabase</button><p id="persistence52-status" role="status" aria-live="polite">Selecione um paciente fictício para conferir.</p></div><div class="history-filter-bar" role="group" aria-label="Filtros do histórico clínico"><label for="historytype">Tipo de registro<select id="historytype"><option value="">Todos os tipos</option></select></label><label for="historyfrom">De<input id="historyfrom" type="date"></label><label for="historyto">Até<input id="historyto" type="date"></label><button type="button" class="secondary" id="historyclear">Limpar filtros</button></div><p id="historycount" role="status" aria-live="polite"></p><div id="patienthistory"></div><h4>Sugestões iniciais por faixa etária</h4><div id="patientrecommendations"></div><p class="note">Sugestões educativas por idade, não prescrições. Considere avaliação individual e preferências da criança.</p><button id="patientactivities" type="button">Abrir biblioteca de atividades</button><button id="patientassessment" type="button" class="secondary">Abrir avaliação completa</button></article></section>
 <section><h3>Registro clínico fictício — Supabase</h3><label>Paciente</label><select id="recordpatient"></select><label>Tipo</label><select id="recordtype"><option value="avaliacao">Avaliação</option><option value="evolucao">Evolução</option><option value="plano_terapeutico">Plano terapêutico</option><option value="seletividade_alimentar">Seletividade alimentar</option><option value="desenvolvimento_sensoriomotor">Desenvolvimento sensoriomotor</option></select><label>Título</label><input id="recordtitle" placeholder="Registro fictício"><label>Observação</label><input id="recordnote" placeholder="Somente dados fictícios"><button id="createrecord">Salvar registro no Supabase</button><div id="recordlist"></div></section>
 <section><h3>Avaliação infantil estruturada — Supabase (teste)</h3><p class="note">Formulário inicial de oito domínios, não padronizado. Não substitui instrumentos validados nem avaliação clínica.</p><label>Paciente fictício</label><select id="evalpatient"></select><label>Data da avaliação</label><input type="date" id="evaldate"><label>Demanda principal (fictícia)</label><input id="evaldemand" placeholder="Ex.: participação em brincadeiras"><div id="evaldomains"></div><label>Observações e contexto funcional</label><textarea id="evalnotes" rows="3" placeholder="Somente dados fictícios"></textarea><button id="saveeval">Salvar avaliação no Supabase</button><h4>Avaliações salvas no Supabase</h4><div id="evallist"></div></section>
 <section id="wizard"><span id="wizardpanel"></span><h3>Avaliação pediátrica completa — por etapas (teste 6.9.1)</h3><p class="note">Formulário clínico descritivo não padronizado. O rascunho fica apenas na memória enquanto esta página estiver aberta; para preservar a avaliação, conclua e salve no Supabase. Use somente pacientes fictícios.</p><label>Paciente fictício</label><select id="wizardpatient"></select><div id="wizardprogress" role="status"></div><div id="wizardform"></div><button class="secondary" id="wizardprev">Voltar</button><button class="secondary" id="wizardnext">Próxima etapa</button><button class="secondary" id="wizarddraft">Guardar rascunho temporário</button><button id="wizardfinish">Concluir e salvar no Supabase</button><button id="wizardcancel" type="button" class="secondary" hidden>Cancelar edição e criar nova avaliação</button><p id="wizardstatus" role="status"></p><h4>Avaliações completas já salvas</h4><div id="wizardhistory"></div></section>
@@ -89,6 +89,7 @@ function clearActivePatient(owner){
 }
 
 function clinicalClearView(){
+ persistence52Reset();
  patientRows=[];allRecords=[];selectedPatientId=null;
  for(const id of ['patientlist','recordpatient','evalpatient','modulepatient','wizardpatient','recordlist','evallist','modulehistory','wizardhistory']){
   const el=$(id);if(el)el.replaceChildren();
@@ -103,7 +104,14 @@ function clinicalClearView(){
  if(typeof legacyContextObserver!=='undefined' && legacyContextObserver){legacyContextObserver.disconnect();legacyContextObserver=null;legacyContextDoc=null;}
  wizardClearDrafts();
 }
-function clinicalInvalidate(){clinicalSessionEpoch++;clinicalLoadSerial++;clinicalSessionOwner=null;clinicalClearView();}
+// Correção 52: a conferência é somente leitura e vinculada à sessão e ao paciente.
+let persistence52Serial=0;
+function persistence52Reset(){
+ persistence52Serial++;
+ const status=$('persistence52-status');if(status)status.textContent='Selecione um paciente fictício para conferir.';
+ const button=$('persistence52-check');if(button)button.disabled=false;
+}
+function clinicalInvalidate(){persistence52Reset();clinicalSessionEpoch++;clinicalLoadSerial++;clinicalSessionOwner=null;clinicalClearView();}
 function clinicalSessionMatches(owner,epoch){return clinicalSessionOwner===owner && clinicalSessionEpoch===epoch;}
 
 const domains=['Participação em AVDs','Motricidade global','Motricidade fina','Processamento sensorial','Comunicação funcional','Brincar e interação','Cognição e planejamento','Participação escolar'];
@@ -131,6 +139,7 @@ const recBands=[
 ];
 function setSelectedPatient(id,show=false){
  if(!patientRows.some(p=>p.id===id))return;
+  if(selectedPatientId!==id)persistence52Reset();
  selectedPatientId=id;
   saveActivePatient(clinicalSessionOwner,id);
  updateActivePatientUI();
@@ -223,6 +232,44 @@ function historyRecordDate(r){
 for(const id of ['historytype','historyfrom','historyto'])$(id)?.addEventListener('change',renderPatientHistory);
 $('historyclear')?.addEventListener('click',()=>{
  $('historytype').value='';$('historyfrom').value='';$('historyto').value='';renderPatientHistory();
+});
+
+// Correção 52: auditoria manual de leitura. Não grava nem replica registros.
+$('persistence52-check')?.addEventListener('click',async()=>{
+ const button=$('persistence52-check'),status=$('persistence52-status');
+ if(button.disabled)return;
+ const owner=clinicalSessionOwner,epoch=clinicalSessionEpoch,pid=selectedPatientId,serial=++persistence52Serial;
+ if(!client||!owner||!pid||!patientRows.some(p=>p.id===pid)){
+  status.textContent='Selecione um paciente autorizado antes de conferir.';return;
+ }
+ button.disabled=true;status.textContent='Consultando o Supabase…';
+ const stillCurrent=()=>clinicalSessionMatches(owner,epoch)&&selectedPatientId===pid&&serial===persistence52Serial;
+ try{
+  const {data:auth,error:authError}=await client.auth.getUser();
+  if(authError||auth?.user?.id!==owner)throw Error('Sessão não confirmada. Entre novamente.');
+  if(!stillCurrent())return;
+  const {data:patient,error:patientError}=await client.from('pacientes').select('id,nome').eq('id',pid).maybeSingle();
+  if(!stillCurrent())return;
+  if(patientError)throw patientError;
+  if(!patient)throw Error('O paciente não está disponível para esta conta. Atualize a lista.');
+  // A consulta não tem limite artificial: paginação para não confundir resultados parciais com perda de dados.
+  const ids=new Set();let offset=0;const pageSize=500;
+  for(;;){
+   const {data:page,error}=await client.from('registros_clinicos').select('id').eq('paciente_id',pid).order('id',{ascending:true}).range(offset,offset+pageSize-1);
+   if(!stillCurrent())return;
+   if(error)throw error;
+   for(const row of page||[])if(row?.id)ids.add(row.id);
+   if((page||[]).length<pageSize)break;
+   offset+=pageSize;
+   if(offset>100000)throw Error('Consulta muito extensa. Solicite revisão técnica.');
+  }
+  const local=allRecords.filter(r=>r.paciente_id===pid),localIds=new Set(local.map(r=>r.id));
+  const notLoaded=[...ids].filter(id=>!localIds.has(id)).length;
+  const notFound=local.filter(r=>!ids.has(r.id)).length;
+  const date=new Date().toLocaleString('pt-BR');
+  status.textContent=`Consulta confirmada em ${date}. Paciente: ${patient.nome}. Registros no Supabase: ${ids.size}. Registros carregados na tela: ${localIds.size}. ${notLoaded||notFound?`Diferenças encontradas: ${notLoaded} registro(s) no banco não carregados e ${notFound} registro(s) na tela não encontrados. Use Atualizar lista e confira novamente; não repita salvamentos.`:'As identificações dos registros conferem nesta consulta.'} Esta conferência não substitui a verificação das políticas RLS com duas contas distintas.`;
+ }catch(error){if(stillCurrent())status.textContent='Não foi possível confirmar os dados: '+(error?.message||'erro de conexão')+'. Não repita salvamentos; tente a conferência novamente.';}
+ finally{if(stillCurrent())button.disabled=false;}
 });
 
 // Correção 28: atualização atômica do histórico, sem duplicar IDs nem trocar
