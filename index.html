@@ -2225,11 +2225,11 @@ ir('ir-print').onclick=async()=>{const pid=ir('ir-patient').value,p=patientRows.
   const {data:auth,error:authError}=await client.auth.getUser();
   if(authError||!auth?.user||auth.user.id!==owner||!clinicalSessionMatches(owner,epoch)||ir('ir-patient').value!==pid)throw Error('A sessão ou o paciente mudou. Tente novamente.');
   const conteudo={formato:ir47Format,versao:1,periodo_de:settings.from||'',periodo_ate:settings.to||'',secoes:chosen,profissional:professionalData.name,crefito:professionalData.crefito,total_registros:filtered.filter(r=>r.conteudo?.formato!==irFormats.notes).length};
-  const {data:saved,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'relatorio_emissao',titulo:'Solicitação de impressão de relatório integrado',conteudo}).select('id').single();
+  const {data:saved,error}=await client.from('registros_clinicos').insert({paciente_id:pid,tipo:'evolucao',titulo:'Solicitação de impressão de relatório integrado',conteudo}).select('id').single();
   if(error)throw error;if(!saved?.id)throw Error('O Supabase não confirmou o registro da solicitação.');
   if(!clinicalSessionMatches(owner,epoch)||ir('ir-patient').value!==pid){w.close();ir46Status('Solicitação registrada, mas a sessão ou paciente mudou. Atualize o histórico antes de imprimir.');return}
   // Atualiza o histórico local sem uma segunda escrita.
-  allRecords.unshift({id:saved.id,paciente_id:pid,tipo:'relatorio_emissao',titulo:'Solicitação de impressão de relatório integrado',conteudo,criado_em:new Date().toISOString()});ir47Render();
+  allRecords.unshift({id:saved.id,paciente_id:pid,tipo:'evolucao',titulo:'Solicitação de impressão de relatório integrado',conteudo,criado_em:new Date().toISOString()});ir47Render();
  }catch(e){w.close();ir46Status('Não foi possível confirmar a solicitação de impressão: '+e.message+' Confira o histórico antes de tentar novamente.');return}
  finally{btn.disabled=false}
  const d=w.document;d.title='Relatório de evolução terapêutica — TO Kids PRO';
