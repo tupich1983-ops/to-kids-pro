@@ -969,7 +969,19 @@ function moveClinical(dest,preferred){if(clinicalSection.parentElement!==dest)de
 }
 function openPage(id){if(!moduleSections[id])return;currentPage=id;updateActivePatientUI();
  if(['sensory','feeding','library'].includes(id))moveLegacy(moduleSections[id],id==='sensory'?'sensory':id==='feeding'?'foodactivities':'library');
- if(['sensory','feeding','library'].includes(id))tkCatalogMode(id==='library');
+ // Biblioteca 7.1.1: falhas de fichas não podem bloquear a navegação.
+ if(['sensory','feeding','library'].includes(id)){
+  try{tkCatalogMode(id==='library');}
+  catch(error){
+   console.error('Biblioteca: falha ao montar catálogo',error);
+   if(id==='library'){
+    const host=moduleSections.library;
+    let notice=document.getElementById('tk-library-recovery');
+    if(!notice){notice=document.createElement('div');notice.id='tk-library-recovery';notice.className='note';host.prepend(notice);}
+    notice.textContent='A biblioteca não conseguiu carregar todas as fichas. Recarregue a página. Detalhes técnicos: '+(error?.message||'erro desconhecido');
+   }
+  }
+ }
  if(id==='feeding')tkFoodPanelInit();
  const foodGuide=document.getElementById('tk-food-extended');if(foodGuide)foodGuide.hidden=id!=='feeding';
  if(['planning','progress'].includes(id))moveClinical(moduleSections[id],id==='progress'?'evolucao':'plano_terapeutico');
@@ -1264,12 +1276,19 @@ function tkRenderCatalog(){
  dest.append(details)}
 }
 function tkCatalogMode(on){
- tkInitCatalog();$('tk-clinical-catalog').hidden=!on;
+ tkInitCatalog();const catalog=document.getElementById('tk-clinical-catalog');if(!catalog)throw Error('Contêiner da biblioteca não foi criado.');catalog.hidden=!on;
  // Recursos antigos permanecem disponíveis nos demais módulos; não são excluídos.
  $('frame').hidden=on;$('toolstatus').hidden=on;
  const quick=legacySection.querySelector('.quicktools');if(quick)quick.hidden=on;
  for(const el of legacySection.querySelectorAll(':scope > p.note,:scope > h3,#legacy-info,#resourcepatient'))el.hidden=on;
- if(on)tkRenderCatalog();
+ if(on){
+  try{tkRenderCatalog();}
+  catch(error){
+   console.error('Falha na renderização da biblioteca',error);
+   const target=document.getElementById('tk-results');
+   if(target){target.replaceChildren();const warning=document.createElement('p');warning.className='note';warning.textContent='Não foi possível mostrar todas as fichas: '+(error?.message||'erro desconhecido');target.append(warning);}
+  }
+ }
 }
 
 
