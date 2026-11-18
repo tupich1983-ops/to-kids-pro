@@ -1319,12 +1319,14 @@ function tkRenderCatalog(){
  const link= document.createElement('button');link.type='button';link.className='secondary';link.textContent='Vincular a uma meta do PTOI';link.disabled=!p;link.onclick=()=>tkChooseActivityForPtoi(x);details.append(link);
  dest.append(details)}
 }
+// Garantir que regras antigas de display nao sobrescrevam o atributo hidden.
+const tkLegacyHideStyle=document.createElement('style');tkLegacyHideStyle.textContent='#resources [hidden]{display:none!important}';document.head.append(tkLegacyHideStyle);
 function tkCatalogMode(on){
  tkInitCatalog();const catalog=document.getElementById('tk-clinical-catalog');if(!catalog)throw Error('Contêiner da biblioteca não foi criado.');catalog.hidden=!on;
  // Recursos antigos permanecem disponíveis nos demais módulos; não são excluídos.
  $('frame').hidden=on;$('toolstatus').hidden=on;
- const quick=legacySection.querySelector('.quicktools');if(quick)quick.hidden=on;
- for(const el of legacySection.querySelectorAll(':scope > p.note,:scope > h3,#legacy-info,#resourcepatient'))el.hidden=on;
+ const quick=legacySection.querySelector('.quicktools');if(quick)quick.hidden=true;
+ for(const el of legacySection.querySelectorAll(':scope > p.note,:scope > h3,#legacy-info,#resourcepatient'))el.hidden=true;
  if(on){
   try{tkRenderCatalog();}
   catch(error){
