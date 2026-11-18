@@ -121,6 +121,23 @@ header{padding:14px 22px}header h2{margin:0;font-size:22px}main{max-width:1120px
 #page-library #resources > #frame,
 #page-library #resources > #tk-food-extended { display:none !important; }
 #page-library #tk-clinical-catalog { display:block !important; }
+
+/* 7.2.6: remover a navegação legada de todos os recursos clínicos.
+   O iframe funcional permanece visível em Sensoriomotor e Alimentação. */
+#page-sensory #resources > h3,
+#page-sensory #resources > p.note,
+#page-sensory #resources > #resourcepatient,
+#page-sensory #resources > #legacy-info,
+#page-sensory #resources > .quicktools,
+#page-sensory #resources > #toolstatus,
+#page-feeding #resources > h3,
+#page-feeding #resources > p.note,
+#page-feeding #resources > #resourcepatient,
+#page-feeding #resources > #legacy-info,
+#page-feeding #resources > .quicktools,
+#page-feeding #resources > #toolstatus { display:none !important; }
+#page-sensory #resources > #frame,
+#page-feeding #resources > #frame { display:block !important; }
 </style></head><body><header><h2>TO Kids PRO 7.0</h2><div>Acesso seguro com e-mail e senha</div></header><main><section id="gate"><div class="login-intro"><strong>Plataforma de apoio à Terapia Ocupacional Pediátrica</strong><p>Organize pacientes, avaliações, planos terapêuticos, evoluções clínicas e atividades em um só lugar.</p><p><strong>7 dias gratuitos</strong> · Assinatura mensal de <strong>R$ 29,90</strong></p></div><h3>Acesse sua conta</h3><p>Informe seu e-mail e senha para entrar.</p><div id="credentials"><h3>Entrar</h3><label>E-mail</label><input id="email" type="email" autocomplete="username"><label>Senha</label><input id="password" type="password" autocomplete="current-password"><button id="login">Entrar e abrir painel</button><button class="secondary" id="signup" type="button">Criar conta</button><div id="signup-panel" hidden style="margin-top:16px;padding:16px;border:1px solid #b7d9d0;border-radius:12px;background:#f8fcfa"><h3>Criar sua conta</h3><p>Cadastre-se com seu e-mail e uma senha segura.</p><label for="signup-email">E-mail</label><input id="signup-email" type="email" autocomplete="email"><label for="signup-password">Senha (mínimo de 12 caracteres)</label><input id="signup-password" type="password" autocomplete="new-password" minlength="12"><label for="signup-confirm">Confirmar senha</label><input id="signup-confirm" type="password" autocomplete="new-password" minlength="12"><button id="signup-submit" type="button">Confirmar cadastro</button><button id="signup-cancel" type="button" class="secondary">Cancelar</button></div><div id="signup-verify-panel" hidden style="margin-top:16px;padding:16px;border:1px solid #b7d9d0;border-radius:12px;background:#f8fcfa"><h3>Confirmar e-mail com código</h3><p>Digite o código de 8 dígitos enviado para o seu e-mail. Não é necessário clicar em links.</p><label for="signup-verify-email">E-mail cadastrado</label><input id="signup-verify-email" type="email" autocomplete="email"><label for="signup-verify-code">Código de confirmação</label><input id="signup-verify-code" type="text" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="one-time-code" placeholder="00000000"><button id="signup-verify-submit" type="button">Validar código</button><button id="signup-verify-resend" type="button" class="secondary">Reenviar código</button><button id="signup-verify-cancel" type="button" class="secondary">Voltar ao login</button></div><button class="secondary" id="reset">Solicitar recuperação de senha</button></div><p id="status" role="status" aria-live="polite"></p><div id="password-recovery-panel" hidden><h3>Definir nova senha</h3><p>Escolha uma senha nova para sua conta. O link de recuperação deve ter sido aberto pelo e-mail recebido.</p><label for="new-password">Nova senha (mínimo de 12 caracteres)</label><input id="new-password" type="password" autocomplete="new-password" minlength="12"><label for="confirm-new-password">Confirme a nova senha</label><input id="confirm-new-password" type="password" autocomplete="new-password" minlength="12"><button id="save-new-password" type="button">Salvar nova senha</button><button id="cancel-password-recovery" type="button" class="secondary">Voltar ao login</button><p id="recovery-status" role="status" aria-live="polite"></p></div></section><section id="access-gate" hidden role="region" aria-label="Situação do acesso"><h3>Acesso ao TO Kids PRO</h3><p id="access-message" role="status" aria-live="polite">Verificando autorização…</p><button type="button" id="access-retry" class="secondary">Verificar novamente</button><button type="button" id="access-logout" class="secondary">Sair da conta</button></section><section id="app" hidden><div class="dashboard-head"><h2>Bem-vindo ao TO Kids PRO 7.0</h2><p>Escolha um módulo para começar.</p>
 <details id="release55" class="release55" hidden aria-label="Verificações internas de validação"><summary>Verificações internas de validação</summary>
 <p><strong>Versão candidata a lançamento.</strong> Este painel não certifica a segurança do aplicativo. Continue usando somente dados fictícios até concluir as verificações.</p>
@@ -1714,7 +1731,19 @@ document.querySelectorAll('.dashboard-tile').forEach(b=>b.addEventListener('clic
 $('homebutton').onclick=()=>{$('dashboard').scrollIntoView({behavior:'smooth',block:'start'})};
 openPage('patients');
 // The embedded local library is kept functional but its second app header/menu is hidden.
-$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','7.0');d.title='TO Kids PRO 7.0 — Recursos terapêuticos';installLegacyContextObserver();}catch(e){}});
+$('frame').addEventListener('load',()=>{try{const d=$('frame').contentDocument;if(!d)return;const css=d.createElement('style');css.textContent='header,body>nav,main>nav{display:none!important}main{max-width:900px!important;padding:6px!important}body{background:white!important}';d.head.append(css);
+// Ocultar somente o aviso de painel demonstrativo no documento legado.
+const hideDemoNotice=()=>{for(const el of d.querySelectorAll('div,p,aside,section,strong,b')){
+ const own=(el.textContent||'').trim();
+ if(own.startsWith('PAINEL DE DEMONSTRAÇÃO SEM PROTEÇÃO DE ACESSO') && own.length<220){
+  let target=el;
+  if(el.tagName==='STRONG'||el.tagName==='B')target=el.closest('p,div,aside')||el;
+  target.style.setProperty('display','none','important');
+ }
+}};
+hideDemoNotice();
+const demoObserver=new MutationObserver(hideDemoNotice);demoObserver.observe(d.body,{subtree:true,childList:true});
+const h=d.querySelector('h1');if(h&&h.textContent.includes('6.2'))h.textContent=h.textContent.replace('6.2','7.0');d.title='TO Kids PRO 7.0 — Recursos terapêuticos';installLegacyContextObserver();}catch(e){}});
 
 // Integração PTOI x Evoluções 1.1 — registros vinculados por meta_id.
 // Uso restrito a pacientes fictícios até revisão de segurança e RLS.
