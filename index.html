@@ -2787,6 +2787,13 @@ irSync();
 (function setupCopm(){
  const root=document.createElement('section');root.id='copm-root';copmPanel.append(root);
  root.innerHTML=`<h3>📊 COPM — Registro digital e cálculo</h3>
+ <div style="background:#f2e4d7;border:1px solid #d5c1af;border-left:5px solid #73c9c6;border-radius:12px;padding:20px;margin:16px 0 24px">
+ <h4 style="margin:0 0 8px;color:#57382e">📖 Antes de preencher: conheça a COPM</h4>
+ <p style="margin:0 0 10px"><b>Leitura recomendada:</b> “O uso da medida canadense de desempenho ocupacional (COPM) em saúde mental”, de Simone Costa de Almeida Bastos, Marisa Cotta Mancini e Rúbia Marques Pyló (2010). O artigo apresenta a finalidade, as etapas gerais, a pontuação, as possibilidades de aplicação e limitações do instrumento.</p>
+ <p style="margin:0 0 14px;font-size:.92em"><b>Importante:</b> este PDF é um artigo científico explicativo, <b>não é o manual oficial da COPM</b> e não substitui a formação necessária para aplicação padronizada.</p>
+ <a href="artigo_COPM_Bastos_Mancini_Pylo_2010.pdf" download="artigo_COPM_Bastos_Mancini_Pylo_2010.pdf" style="display:inline-block;background:#57382e;color:#fff;padding:11px 18px;border-radius:8px;font-weight:700;text-decoration:none">⬇ Baixar artigo explicativo (PDF)</a>
+ <p style="font-size:.85em;margin:10px 0 0">Se o download não iniciar, confirme que o arquivo PDF foi publicado na mesma pasta do index.html no GitHub.</p>
+ </div>
  <p class="note"><b>Atenção:</b> ferramenta auxiliar de registro e cálculo inspirada no fluxo da Medida Canadense de Desempenho Ocupacional (COPM). Não é reprodução oficial do formulário, não substitui o manual, o treinamento nem a licença de uso da COPM. Para aplicação padronizada, utilize a edição autorizada.</p>
  <p>Entrevista centrada na pessoa: identifique dificuldades ocupacionais em autocuidado, produtividade (incluindo brincar e escola) e lazer; peça que a pessoa atribua importância de 1 a 10, selecione até cinco prioridades e registre sua percepção de desempenho e satisfação, na avaliação inicial e na reavaliação. Na pediatria, registre quem respondeu e a forma de participação da criança.</p>
  <div class="history"><label>Paciente fictício ativo</label><p id="copm-patient"></p><label for="copm-respondent">Respondente / contexto da entrevista</label><input id="copm-respondent" placeholder="Ex.: criança com apoio do cuidador; mãe; pai"><label for="copm-date1">Data inicial</label><input type="date" id="copm-date1"><label for="copm-date2">Data da reavaliação</label><input type="date" id="copm-date2"><label for="copm-notes">Observações e contexto funcional</label><textarea id="copm-notes" rows="3" placeholder="Somente informações fictícias"></textarea></div>
